@@ -1,0 +1,8 @@
+// Copy this file to `Debug.local.xcconfig` and paste your real X (Twitter) OAuth public Client ID.
+// The actual file is gitignored. The Client ID is the public half of your X app at
+// https://developer.x.com/en/portal/dashboard → your RareImagery app → Keys and tokens →
+// OAuth 2.0 Client ID. (NOT the Client Secret — that stays server-side.)
+//
+// Make sure rareimagery://auth/callback is registered as a Callback URL in the X app settings.
+
+X_CLIENT_ID = paste_your_x_oauth_client_id_here

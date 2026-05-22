@@ -1,0 +1,9 @@
+// Debug build — points at local Next.js dev server.
+// The /$()/ trick prevents xcconfig from treating // as a comment.
+API_BASE_URL = http:/$()/localhost:3000
+X_CLIENT_ID = REPLACE_ME_WITH_X_CLIENT_ID
+ENVIRONMENT = development
+
+// Local overrides — paste your real X_CLIENT_ID into Configuration/Debug.local.xcconfig
+// (gitignored). See Debug.local.xcconfig.example for the format.
+#include? "Debug.local.xcconfig"

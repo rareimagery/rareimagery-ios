@@ -1,0 +1,8 @@
+// Release build — production BFF.
+API_BASE_URL = https:/$()/www.rareimagery.net
+X_CLIENT_ID = REPLACE_ME_WITH_X_CLIENT_ID
+ENVIRONMENT = production
+
+// Local overrides — paste production X_CLIENT_ID into Configuration/Release.local.xcconfig
+// (gitignored). For TestFlight you can also leave this and inject via CI.
+#include? "Release.local.xcconfig"
