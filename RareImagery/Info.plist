@@ -32,7 +32,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>100</string>
+	<string>1000</string>
 	<key>Environment</key>
 	<string>$(ENVIRONMENT)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

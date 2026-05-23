@@ -42,7 +42,7 @@ targets:
       properties:
         CFBundleDisplayName: RareImagery
         CFBundleShortVersionString: "0.1.0"
-        CFBundleVersion: "100"
+        CFBundleVersion: "1000"
         LSRequiresIPhoneOS: true
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:

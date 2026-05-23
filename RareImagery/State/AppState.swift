@@ -10,7 +10,6 @@ final class AppState {
     let client: APIClient
     let authRepository: AuthRepository
     let authService: AuthService
-    let uploadRepository: UploadRepository
     let productRepository: ProductRepository
     let session: AuthSession
     let capture: CaptureSession
@@ -23,7 +22,6 @@ final class AppState {
         self.client = client
         self.authRepository = AuthRepository(client: client)
         self.authService = AuthService(configuration: configuration, repository: authRepository, client: client)
-        self.uploadRepository = UploadRepository(client: client)
         self.productRepository = ProductRepository(client: client)
         self.session = AuthSession()
         self.capture = CaptureSession()

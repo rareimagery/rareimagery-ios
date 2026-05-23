@@ -7,19 +7,15 @@ struct FilmstripView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(Array(capture.shots.enumerated()), id: \.element.id) { index, shot in
-                    ShotThumbnail(
-                        shot: shot,
-                        isHero: index == capture.heroIndex,
-                        isUploaded: shot.uploadedURL != nil
-                    )
-                    .onTapGesture { capture.setHero(index: index) }
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            capture.removeShot(id: shot.id)
-                        } label: {
-                            Label("Remove", systemImage: "trash")
+                    ShotThumbnail(shot: shot, isHero: index == capture.heroIndex)
+                        .onTapGesture { capture.setHero(index: index) }
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                capture.removeShot(id: shot.id)
+                            } label: {
+                                Label("Remove", systemImage: "trash")
+                            }
                         }
-                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -31,7 +27,6 @@ struct FilmstripView: View {
 private struct ShotThumbnail: View {
     let shot: CaptureSession.Shot
     let isHero: Bool
-    let isUploaded: Bool
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -51,26 +46,16 @@ private struct ShotThumbnail: View {
                     .frame(width: 96, height: 96)
             }
 
-            VStack(alignment: .trailing, spacing: 4) {
-                if isHero {
-                    Text("MAIN")
-                        .font(.system(size: 10, weight: .heavy))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(AppColor.accent)
-                        .foregroundStyle(.white)
-                        .clipShape(Capsule())
-                }
-                if !isUploaded {
-                    Image(systemName: "icloud.slash")
-                        .font(.system(size: 12))
-                        .foregroundStyle(AppColor.textSecondary)
-                        .padding(4)
-                        .background(.black.opacity(0.6))
-                        .clipShape(Circle())
-                }
+            if isHero {
+                Text("MAIN")
+                    .font(.system(size: 10, weight: .heavy))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(AppColor.accent)
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+                    .padding(6)
             }
-            .padding(6)
         }
     }
 }

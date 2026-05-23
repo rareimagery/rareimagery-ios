@@ -9,10 +9,8 @@ struct CaptureFlowView: View {
             CaptureView()
 
             switch state.capture.phase {
-            case .uploading(let completed, let total):
-                overlay(title: "Uploading", subtitle: "\(completed) of \(total)")
-            case .analyzing:
-                overlay(title: "Analyzing", subtitle: "Grok Vision is reading the photo")
+            case .working:
+                overlay(title: "Analyzing", subtitle: "Reading your hero shot")
             case .ready(let draft):
                 DraftPreview(draft: draft)
             case .error(let message):
@@ -79,27 +77,45 @@ private struct DraftPreview: View {
                 Text(draft.title)
                     .font(AppFont.title)
                     .foregroundStyle(AppColor.textPrimary)
+
+                if let summary = draft.summary {
+                    Text(summary)
+                        .font(AppFont.headline)
+                        .foregroundStyle(AppColor.textPrimary.opacity(0.9))
+                }
+
                 if let description = draft.description {
                     Text(description)
                         .font(AppFont.body)
                         .foregroundStyle(AppColor.textSecondary)
                 }
+
                 HStack(spacing: 8) {
-                    if let cat = draft.category {
-                        labelChip(cat.displayName)
-                    }
-                    if let cond = draft.condition {
-                        labelChip(cond.displayName)
-                    }
-                    if let price = draft.suggestedPrice {
-                        labelChip("$\(price)")
-                    }
+                    if let cat = draft.category { labelChip(cat.displayName) }
+                    if let cond = draft.condition { labelChip(cond.displayName) }
+                    if let brand = draft.brand { labelChip(brand) }
+                    if let price = draft.priceDisplay { labelChip(price) }
+                    if draft.handmade == true { labelChip("Handmade") }
                 }
+
                 if let tags = draft.tags, !tags.isEmpty {
                     Text(tags.map { "#\($0)" }.joined(separator: " "))
                         .font(AppFont.caption)
                         .foregroundStyle(AppColor.textSecondary)
                 }
+
+                if let flags = draft.flags, !flags.isEmpty {
+                    Text("Flags: \(flags.joined(separator: ", "))")
+                        .font(AppFont.caption)
+                        .foregroundStyle(.orange)
+                }
+
+                if let conf = draft.confidence {
+                    Text("Confidence: \(Int((conf * 100).rounded()))%")
+                        .font(AppFont.caption)
+                        .foregroundStyle(AppColor.textSecondary)
+                }
+
                 Spacer(minLength: 24)
                 Button("New capture") {
                     state.capture.reset()
@@ -124,68 +140,42 @@ private struct DraftPreview: View {
     }
 }
 
-/// Static helper that runs the upload + analyze pipeline.
-/// Lives at top-level so views can call it without holding a reference to a view-model.
+/// Drives the `/api/vision/analyze` call. JSON + base64 data URLs.
+/// Each shot is pre-compressed to ≤1280px JPEG 0.85 before encoding.
 @MainActor
 enum CaptureCoordinator {
     static func run(state: AppState) async {
         let capture = state.capture
-        let upload = state.uploadRepository
         let products = state.productRepository
 
         guard capture.canAnalyze else { return }
+        capture.phase = .working
 
-        let total = capture.shots.count
-        capture.phase = .uploading(completed: 0, total: total)
+        // Move hero to front so `heroOnly: true` semantics match user intent.
+        let orderedShots: [CaptureSession.Shot] = {
+            guard capture.shots.indices.contains(capture.heroIndex) else { return capture.shots }
+            var rest = capture.shots
+            let hero = rest.remove(at: capture.heroIndex)
+            return [hero] + rest
+        }()
 
-        for (i, shot) in capture.shots.enumerated() where shot.uploadedURL == nil {
-            do {
-                let resp = try await upload.upload(jpegData: shot.jpegData, filename: "shot-\(i + 1).jpg")
-                if let url = resp.publicURL {
-                    capture.markUploaded(id: shot.id, url: url)
-                }
-                capture.phase = .uploading(completed: i + 1, total: total)
-            } catch {
-                capture.phase = .error("Upload failed (\(i + 1)/\(total)): \(message(error))")
-                return
-            }
-        }
+        let dataURLs = orderedShots.map { ImageCompression.toBase64DataURL($0.jpegData) }
 
-        guard let hero = capture.hero, let heroURL = hero.uploadedURL else {
-            capture.phase = .error("Hero image has no upload URL.")
-            return
-        }
-
-        let extras = capture.shots
-            .filter { $0.id != hero.id }
-            .compactMap(\.uploadedURL)
-
-        capture.phase = .analyzing
         do {
-            let draft = try await products.fromImages(
-                heroURL: heroURL,
-                additionalURLs: extras,
-                voiceTranscript: capture.voiceTranscript.isEmpty ? nil : capture.voiceTranscript,
+            let result = try await products.analyze(
+                dataURLs: dataURLs,
                 intent: capture.intent,
-                storeUuid: state.session.claims?.storeUuid
+                voiceTranscript: capture.voiceTranscript.isEmpty ? nil : capture.voiceTranscript,
+                heroOnly: true
             )
-            capture.phase = .ready(draft)
+            capture.phase = .ready(result.draft)
         } catch {
-            capture.phase = .error("Analyze failed: \(message(error))")
+            capture.phase = .error(message(error))
         }
     }
 
     private static func message(_ error: Error) -> String {
-        if let api = error as? APIError {
-            switch api {
-            case .unauthorized: return "Unauthorized"
-            case .badRequest(let m): return m
-            case .serverError(_, let m): return m ?? "Server error"
-            case .network: return "Network unreachable"
-            case .decode(let m): return "Decode: \(m)"
-            default: return "\(api)"
-            }
-        }
+        if let api = error as? APIError { return api.userFacingMessage }
         return error.localizedDescription
     }
 }

@@ -3,6 +3,10 @@ API_BASE_URL = https:/$()/www.rareimagery.net
 X_CLIENT_ID = REPLACE_ME_WITH_X_CLIENT_ID
 ENVIRONMENT = production
 
+// Note: CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution is set at the
+// target level in project.yml so xcodegen emits it into the .pbxproj (target
+// settings override xcconfig).
+
 // Local overrides — paste production X_CLIENT_ID into Configuration/Release.local.xcconfig
 // (gitignored). For TestFlight you can also leave this and inject via CI.
 #include? "Release.local.xcconfig"
