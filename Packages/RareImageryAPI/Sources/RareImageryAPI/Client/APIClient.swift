@@ -29,7 +29,7 @@ public actor APIClient {
         let (data, response) = try await perform(request, timeout: endpoint.timeout)
 
         guard let http = response as? HTTPURLResponse else {
-            throw APIError.serverError(status: -1, message: "Non-HTTP response")
+            throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
         }
 
         if http.statusCode == 401 && endpoint.requiresAuth && retryOn401 {
@@ -50,7 +50,7 @@ public actor APIClient {
         let request = try await buildRequest(for: endpoint)
         let (data, response) = try await perform(request, timeout: endpoint.timeout)
         guard let http = response as? HTTPURLResponse else {
-            throw APIError.serverError(status: -1, message: "Non-HTTP response")
+            throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
         }
         if http.statusCode == 401 && endpoint.requiresAuth && retryOn401 {
             _ = try await refreshTokens()
@@ -88,7 +88,7 @@ public actor APIClient {
         let request = try await buildRequest(for: endpoint)
         let (data, response) = try await perform(request, timeout: 15)
         guard let http = response as? HTTPURLResponse else {
-            throw APIError.serverError(status: -1, message: "Non-HTTP response")
+            throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
         }
         let tokens: AuthTokenResponse = try Self.decodeResponse(data: data, response: http)
         try await persist(tokens)
@@ -170,11 +170,18 @@ public actor APIClient {
             let retryAfter = response.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init)
             throw APIError.rateLimited(retryAfter: retryAfter)
         case 400..<500:
-            let err = try? JSONDecoder().decode(MobileErrorResponse.self, from: data)
-            throw APIError.badRequest(message: err?.displayMessage ?? "Bad request")
+            let envelope = try? JSONDecoder().decode(MobileErrorResponse.self, from: data)
+            let code = envelope?.code.flatMap(MobileErrorCode.init(rawValue:))
+            let message = envelope?.displayMessage ?? "Bad request"
+            throw APIError.badRequest(code: code, message: message)
         default:
-            let err = try? JSONDecoder().decode(MobileErrorResponse.self, from: data)
-            throw APIError.serverError(status: response.statusCode, message: err?.displayMessage)
+            let envelope = try? JSONDecoder().decode(MobileErrorResponse.self, from: data)
+            let code = envelope?.code.flatMap(MobileErrorCode.init(rawValue:))
+            throw APIError.serverError(
+                status: response.statusCode,
+                code: code,
+                message: envelope?.displayMessage
+            )
         }
     }
 }

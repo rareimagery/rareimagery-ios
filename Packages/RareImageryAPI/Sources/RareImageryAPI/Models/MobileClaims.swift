@@ -46,7 +46,8 @@ public struct MobileClaims: Codable, Sendable, Equatable {
     public var isExpired: Bool { expiresAt <= Date() }
 
     /// True when the token expires within the given window — caller should refresh.
-    public func shouldRefresh(within window: TimeInterval = 120) -> Bool {
+    /// Spec (CLAUDE.md §2.3): refresh 60 s before expiry.
+    public func shouldRefresh(within window: TimeInterval = 60) -> Bool {
         expiresAt.timeIntervalSinceNow <= window
     }
 

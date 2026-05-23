@@ -1,12 +1,17 @@
 import UIKit
 
 enum ImageCompression {
+    /// New BFF contract (2026-05-22): preprocess locally to ≤1280 px long edge,
+    /// JPEG at 0.85 quality. Server skips its sharp resize when we send these
+    /// already-normalized images.
+    static let defaultMaxDimension: CGFloat = 1280
+    static let defaultQuality: CGFloat = 0.85
+
     /// Resize to at most `maxDimension` on the long edge, then JPEG-encode at `quality`.
-    /// Returns nil if compression fails.
     static func compressForUpload(
         _ image: UIImage,
-        maxDimension: CGFloat = 1600,
-        quality: CGFloat = 0.7
+        maxDimension: CGFloat = defaultMaxDimension,
+        quality: CGFloat = defaultQuality
     ) -> Data? {
         let resized = image.resized(toMaxDimension: maxDimension)
         return resized.jpegData(compressionQuality: quality)
@@ -14,11 +19,17 @@ enum ImageCompression {
 
     static func compressForUpload(
         data: Data,
-        maxDimension: CGFloat = 1600,
-        quality: CGFloat = 0.7
+        maxDimension: CGFloat = defaultMaxDimension,
+        quality: CGFloat = defaultQuality
     ) -> Data? {
         guard let image = UIImage(data: data) else { return nil }
         return compressForUpload(image, maxDimension: maxDimension, quality: quality)
+    }
+
+    /// Produces a `data:image/jpeg;base64,...` URL string suitable for `imageUrls`
+    /// in `POST /api/vision/analyze`.
+    static func toBase64DataURL(_ jpegData: Data) -> String {
+        "data:image/jpeg;base64,\(jpegData.base64EncodedString())"
     }
 }
 

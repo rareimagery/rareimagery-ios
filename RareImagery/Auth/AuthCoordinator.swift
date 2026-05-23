@@ -5,6 +5,8 @@ import RareImageryAPI
 @MainActor
 final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextProviding {
 
+    private let logger = APILogger(category: "AuthCoordinator")
+
     func signInWithX(state: AppState) async {
         do {
             let request = try await state.authService.startXAuth()
@@ -14,10 +16,16 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
             )
             let tokens = try await state.authService.completeXAuth(callbackURL: callbackURL)
             state.session.apply(tokens: tokens)
-        } catch APIError.authCancelled {
-            state.session.setError("Sign-in cancelled.")
+        } catch let error as APIError {
+            if let code = error.code {
+                logger.warning("X sign-in failed: code=\(code.rawValue), reason=\(error.userFacingMessage)")
+            } else {
+                logger.warning("X sign-in failed: \(error.userFacingMessage)")
+            }
+            state.session.setError(error.userFacingMessage)
         } catch {
-            state.session.setError(prettyError(error))
+            logger.error("X sign-in unexpected error: \(error.localizedDescription)")
+            state.session.setError(error.localizedDescription)
         }
     }
 
@@ -54,16 +62,4 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
         ASPresentationAnchor()
     }
 
-    private func prettyError(_ error: Error) -> String {
-        if let apiError = error as? APIError {
-            switch apiError {
-            case .invalidConfiguration(let msg): return "Config error: \(msg)"
-            case .authFailed(let msg): return msg
-            case .unauthorized: return "Unauthorized — please try again."
-            case .network: return "Network error — check your connection."
-            default: return "\(apiError)"
-            }
-        }
-        return error.localizedDescription
-    }
 }
