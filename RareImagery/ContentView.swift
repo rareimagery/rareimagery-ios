@@ -1,6 +1,25 @@
 import SwiftUI
 import RareImageryAPI
 
+/// Top-level router. Three signed-in destinations:
+///
+///   1. NEW user (no storeUuid/slug — defensive guard, shouldn't fire in
+///      practice since CreatorProvisioner mints both atomically at sign-in.
+///      Kept per PR #1's defensive-gate decision.)
+///      → OnboardingView (the legacy 4-step wizard; remains as a fallback)
+///
+///   2. RECENTLY signed-in user (storeUuid + slug present, hasn't dismissed
+///      the live-preview screen yet) → LivePreviewView (the "You're live"
+///      screen — the new onboarding pattern per the 2026-05-23 redesign).
+///
+///   3. RETURNING user (or anyone who's tapped "Create first product" /
+///      "Just explore" on the LivePreviewView) → CaptureFlowView (the main
+///      app entry).
+///
+/// The transition from state #2 → #3 is local-only: a flag on AuthSession
+/// flips once the user dismisses the LivePreviewView. No round-trip to
+/// the server. Sign-out resets the flag so the next sign-in re-shows
+/// the welcome screen.
 struct ContentView: View {
     @Environment(AppState.self) private var state
 
@@ -17,11 +36,15 @@ struct ContentView: View {
             SignInView()
 
         case .signedIn(let claims):
-            // Signed in but the server hasn't issued storeUuid/slug yet → onboarding.
-            // (Once BFF adds a `needsOnboarding` JWT claim per the agent's note,
-            // we can read that directly instead of inferring from missing fields.)
-            if needsOnboarding(claims) {
+            if needsLegacyOnboarding(claims) {
+                // Defensive fallback — shouldn't fire because CreatorProvisioner
+                // mints storeUuid/slug atomically at sign-in. If the wire ever
+                // decouples, the old wizard catches it.
                 OnboardingView(keychain: state.keychain)
+            } else if !state.session.hasSeenLivePreview {
+                // The "You're live" screen — first thing a freshly-signed-in
+                // user sees. Three actions decide what comes next.
+                LivePreviewView(onAction: handleLivePreviewAction)
             } else {
                 NavigationStack {
                     CaptureFlowView()
@@ -31,7 +54,25 @@ struct ContentView: View {
         }
     }
 
-    private func needsOnboarding(_ claims: MobileClaims) -> Bool {
+    private func needsLegacyOnboarding(_ claims: MobileClaims) -> Bool {
         (claims.storeUuid ?? "").isEmpty || (claims.slug ?? "").isEmpty
+    }
+
+    private func handleLivePreviewAction(_ action: LivePreviewView.Action) {
+        // All three actions dismiss the live-preview screen. The difference
+        // is what happens next:
+        //   - .createFirstProduct: route to Capture (the wow moment)
+        //   - .tweakStore: TweakSheetView is presented internally by
+        //                  LivePreviewView; this case fires after the user
+        //                  dismisses the sheet — same as "Just explore"
+        //                  semantically (they go to the main app)
+        //   - .justExplore: route to the main app, skip the capture intro
+        //
+        // For all three, we flip hasSeenLivePreview so we don't re-render
+        // the welcome screen on next render tick. CaptureFlowView is the
+        // default landing for all three actions today. If we later add a
+        // separate "browse / explore" view, .justExplore would route there
+        // instead. For v1 the main app IS the capture flow.
+        state.session.hasSeenLivePreview = true
     }
 }
