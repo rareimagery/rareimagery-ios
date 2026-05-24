@@ -59,20 +59,26 @@ struct ContentView: View {
     }
 
     private func handleLivePreviewAction(_ action: LivePreviewView.Action) {
-        // All three actions dismiss the live-preview screen. The difference
-        // is what happens next:
-        //   - .createFirstProduct: route to Capture (the wow moment)
-        //   - .tweakStore: TweakSheetView is presented internally by
-        //                  LivePreviewView; this case fires after the user
-        //                  dismisses the sheet — same as "Just explore"
-        //                  semantically (they go to the main app)
-        //   - .justExplore: route to the main app, skip the capture intro
+        // Two parent-driven actions remain after the FirstProduct
+        // wizard moved internal to LivePreviewView (via fullScreenCover):
         //
-        // For all three, we flip hasSeenLivePreview so we don't re-render
-        // the welcome screen on next render tick. CaptureFlowView is the
-        // default landing for all three actions today. If we later add a
-        // separate "browse / explore" view, .justExplore would route there
-        // instead. For v1 the main app IS the capture flow.
+        //   - .tweakStore  → fires after the user dismisses TweakSheetView
+        //                    (presented internally by LivePreviewView).
+        //                    Semantically equivalent to "Just explore" —
+        //                    they go to the main app.
+        //   - .justExplore → user explicitly skipped the wizard. Route
+        //                    to the main app.
+        //
+        // Both flip hasSeenLivePreview so we don't re-render the welcome
+        // screen on next render tick. CaptureFlowView is the default
+        // landing for both. If we later add a separate "browse / explore"
+        // view, .justExplore would route there instead.
+        //
+        // Note: the previous .createFirstProduct case is gone — the
+        // wizard's "Continue to Rare" CTA on Screen 3 flips
+        // hasSeenLivePreview directly via FirstProductFlowView's
+        // finishWizard() helper. We never round-trip back here for
+        // that path.
         state.session.hasSeenLivePreview = true
     }
 }
