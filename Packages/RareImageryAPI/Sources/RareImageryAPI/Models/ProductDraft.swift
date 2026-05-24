@@ -16,6 +16,34 @@ public struct ProductDraft: Codable, Sendable, Equatable {
     public let confidence: Double?
     public let flags: [String]?
 
+    public init(
+        title: String,
+        summary: String? = nil,
+        description: String? = nil,
+        category: ProductCategory? = nil,
+        condition: ProductCondition? = nil,
+        brand: String? = nil,
+        suggestedPriceLow: Decimal? = nil,
+        suggestedPriceHigh: Decimal? = nil,
+        tags: [String]? = nil,
+        handmade: Bool? = nil,
+        confidence: Double? = nil,
+        flags: [String]? = nil
+    ) {
+        self.title = title
+        self.summary = summary
+        self.description = description
+        self.category = category
+        self.condition = condition
+        self.brand = brand
+        self.suggestedPriceLow = suggestedPriceLow
+        self.suggestedPriceHigh = suggestedPriceHigh
+        self.tags = tags
+        self.handmade = handmade
+        self.confidence = confidence
+        self.flags = flags
+    }
+
     public var priceDisplay: String? {
         switch (suggestedPriceLow, suggestedPriceHigh) {
         case let (.some(lo), .some(hi)) where lo != hi:
