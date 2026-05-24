@@ -11,6 +11,7 @@ final class AppState {
     let authRepository: AuthRepository
     let authService: AuthService
     let productRepository: ProductRepository
+    let onboardingRepository: OnboardingRepository
     let session: AuthSession
     let capture: CaptureSession
 
@@ -23,6 +24,7 @@ final class AppState {
         self.authRepository = AuthRepository(client: client)
         self.authService = AuthService(configuration: configuration, repository: authRepository, client: client)
         self.productRepository = ProductRepository(client: client)
+        self.onboardingRepository = OnboardingRepository(client: client)
         self.session = AuthSession()
         self.capture = CaptureSession()
     }

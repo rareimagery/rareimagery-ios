@@ -337,22 +337,55 @@ struct TweakSheetView: View {
         isSaving = true
         errorMessage = nil
 
-        // TODO: wire to actual provision-store PATCH endpoint when the
-        // iOS-side OnboardingRepository.updateStore(...) helper exists.
-        // For now: simulate the save + dismiss so the UX flow is testable.
-        //
-        // Expected real call:
-        //   try await state.onboardingRepository.updateStore(
-        //     slug: slugDraft.isEmpty ? nil : slugDraft,
-        //     colorScheme: selectedColor.id,
-        //     bio: bioOverride.isEmpty ? nil : bioOverride
-        //   )
-        // On success, ContentView re-renders with the new state.
+        do {
+            // Call the canonical BFF endpoint via the shared OnboardingRepository.
+            // The endpoint is idempotent — `CreatorProvisioner` on Drupal either
+            // creates the user/store/profile/subdomain atomically (status: "created")
+            // or returns the existing entities (status: "existing"). Either way iOS
+            // gets a ProvisionStoreResponse back and we can dismiss.
+            //
+            // Only pass fields the user actually changed:
+            //   - slugDraft empty -> nil (keep current slug from MobileClaims)
+            //   - bioOverride empty -> nil (keep X bio from session)
+            //   - selectedColor always sent (user may have tapped a swatch even
+            //     if they chose the same one back; sending the current value is
+            //     harmless and lets the BFF persist it as the canonical default)
+            _ = try await state.onboardingRepository.updateStore(
+                subdomain: slugDraft.isEmpty ? nil : slugDraft,
+                bio: bioOverride.isEmpty ? nil : bioOverride,
+                colorScheme: selectedColor.id
+            )
 
-        try? await Task.sleep(for: .milliseconds(600))
-
-        isSaving = false
-        dismiss()
+            isSaving = false
+            dismiss()
+        } catch let error as APIError {
+            // Map structured BFF errors into a user-facing message. APIError's
+            // `code` accessor (MobileErrorCode?) covers slug + reserved cases
+            // surfaced via the BFF's discriminated error envelope (PR #15);
+            // unauthorized + network are top-level APIError cases.
+            isSaving = false
+            if let code = error.code {
+                switch code {
+                case .slugTaken:
+                    errorMessage = "That URL is already taken. Try a different name."
+                    slugStatus = .taken
+                case .reservedSlug:
+                    errorMessage = "That URL is reserved. Try a different name."
+                    slugStatus = .invalid(reason: "Reserved name")
+                default:
+                    errorMessage = error.userFacingMessage
+                }
+            } else if case .unauthorized = error {
+                errorMessage = "Your session expired. Sign in again to keep going."
+            } else if case .network = error {
+                errorMessage = "Couldn't reach the server. Check your connection and try again."
+            } else {
+                errorMessage = error.userFacingMessage
+            }
+        } catch {
+            isSaving = false
+            errorMessage = "Couldn't save your changes. \(error.localizedDescription)"
+        }
     }
 
     private var avatarURLFromClaims: URL? {
