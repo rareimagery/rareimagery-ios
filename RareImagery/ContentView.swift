@@ -46,10 +46,7 @@ struct ContentView: View {
                 // user sees. Three actions decide what comes next.
                 LivePreviewView(onAction: handleLivePreviewAction)
             } else {
-                NavigationStack {
-                    CaptureFlowView()
-                }
-                .tint(AppColor.accent)
+                MainTabView()
             }
         }
     }

@@ -5,6 +5,8 @@ enum AppColor {
     static let background = Color(red: 10/255, green: 10/255, blue: 10/255)
     /// #171717 — elevated surfaces (cards, inputs)
     static let surface = Color(red: 23/255, green: 23/255, blue: 23/255)
+    /// Slightly elevated chip/search backgrounds
+    static let surfaceSecondary = Color(red: 26/255, green: 26/255, blue: 26/255)
     /// #7c3aed — brand accent (buttons, links, hero)
     static let accent = Color(red: 124/255, green: 58/255, blue: 237/255)
     /// #FF6B00 — primary CTA orange (Sign in, Continue, Make sellable).

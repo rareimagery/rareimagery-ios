@@ -19,14 +19,6 @@ struct CaptureFlowView: View {
                 EmptyView()
             }
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Sign out") {
-                    Task { await state.signOut() }
-                }
-                .foregroundStyle(AppColor.textSecondary)
-            }
-        }
     }
 
     private func overlay(title: String, subtitle: String) -> some View {
