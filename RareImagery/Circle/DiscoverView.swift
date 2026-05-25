@@ -17,7 +17,11 @@ struct DiscoverView: View {
                     .tint(AppColor.accent)
                     .padding(.top, 24)
             } else if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                userList(service.searchResults, emptyMessage: "No users found. Try an exact @handle.")
+                if service.errorMessage != nil, service.searchResults.isEmpty {
+                    searchFailedView
+                } else {
+                    userList(service.searchResults, emptyMessage: "No users found. Try an exact @handle.")
+                }
             } else {
                 suggestionsSection
             }
@@ -60,6 +64,36 @@ struct DiscoverView: View {
                 userList(service.suggestions, emptyMessage: "")
             }
         }
+    }
+
+    @ViewBuilder
+    private var searchFailedView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(.red)
+            Text("Search failed")
+                .font(AppFont.headline)
+                .foregroundStyle(AppColor.textPrimary)
+            Text("Try an exact @handle. If it keeps failing, X may be rate-limited.")
+                .font(AppFont.callout)
+                .foregroundStyle(AppColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            Button {
+                service.errorMessage = nil
+                service.searchUsers(query: searchText)
+            } label: {
+                Text("Retry search")
+                    .font(AppFont.buttonLabel)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.bordered)
+            .tint(AppColor.accent)
+        }
+        .padding(.top, 48)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     @ViewBuilder

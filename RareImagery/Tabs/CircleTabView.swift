@@ -20,11 +20,16 @@ struct CircleTabView: View {
                 .padding(.vertical, 12)
 
                 if let message = service?.errorMessage {
-                    Text(message)
-                        .font(AppFont.caption)
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
+                    ErrorBanner(
+                        message: message,
+                        onRetry: {
+                            Task { await service?.syncCircleToServer() }
+                        },
+                        onDismiss: {
+                            service?.errorMessage = nil
+                        }
+                    )
+                    .padding(.bottom, 8)
                 }
 
                 Group {

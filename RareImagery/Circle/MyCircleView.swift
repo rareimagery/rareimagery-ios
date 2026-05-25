@@ -37,6 +37,12 @@ struct MyCircleView: View {
             }
         } else {
             ScrollView {
+                if members.count >= CircleService.maxCircleSize {
+                    AtCapWarningCard(count: members.count, cap: CircleService.maxCircleSize)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
+                }
+
                 LazyVGrid(columns: columns, spacing: 20) {
                     ForEach(members) { member in
                         VStack(spacing: 8) {
