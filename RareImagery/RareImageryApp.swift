@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import RareImageryAPI
 
 @main
@@ -25,5 +26,6 @@ struct RareImageryApp: App {
                     }
                 }
         }
+        .modelContainer(for: [CircleMember.self, FavoriteItem.self])
     }
 }
