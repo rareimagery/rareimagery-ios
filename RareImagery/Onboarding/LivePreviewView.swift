@@ -92,12 +92,10 @@ struct LivePreviewView: View {
 
     private var headerSection: some View {
         VStack(spacing: 12) {
-            // The dog logo placeholder — replaced with Image("rareimagery-logo")
-            // once the asset is dragged into Assets.xcassets (TODO(logo) flag
-            // in WelcomeView.swift).
-            Image(systemName: "pawprint.fill")
-                .font(.system(size: 36, weight: .light))
-                .foregroundStyle(AppColor.cta)
+            Image("rareimagery-logo")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 56)
 
             Text("You're live")
                 .font(.system(size: 32, weight: .bold))

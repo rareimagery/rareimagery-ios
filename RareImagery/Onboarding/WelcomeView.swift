@@ -9,9 +9,6 @@ import RareImageryAPI
 /// Brand notes:
 ///   - Rare = the dog mascot. Voice is first-person, friendly.
 ///   - The logo lives at `Assets.xcassets/rareimagery-logo.imageset/`.
-///     Until that asset is in place, this view falls back to an SF
-///     Symbol so the layout renders. Replace the placeholder once
-///     the PNG is dragged in — search this file for "TODO(logo)".
 ///   - CTA color is `AppColor.cta` (#FF6B00 orange) — onboarding
 ///     uses the warm CTA, not `AppColor.accent` (purple), which is
 ///     for in-app actions.
@@ -33,19 +30,10 @@ struct WelcomeView: View {
             VStack(spacing: 24) {
                 Spacer()
 
-                // TODO(logo): drop the Rare bloodhound PNG into
-                //   RareImagery/Assets.xcassets/rareimagery-logo.imageset/
-                // (including a Contents.json with 1x/2x/3x variants),
-                // then replace the SF Symbol below with:
-                //   Image("rareimagery-logo")
-                //     .resizable()
-                //     .scaledToFit()
-                //     .frame(width: 200, height: 200)
-                Image(systemName: "pawprint.fill")
+                Image("rareimagery-logo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 140, height: 140)
-                    .foregroundStyle(AppColor.cta)
+                    .frame(width: 200, height: 200)
 
                 VStack(spacing: 14) {
                     Text("Meet Rare")
