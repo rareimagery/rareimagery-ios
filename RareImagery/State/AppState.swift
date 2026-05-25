@@ -14,6 +14,7 @@ final class AppState {
     let onboardingRepository: OnboardingRepository
     let circleRepository: CircleRepository
     let circleShareRepository: CircleShareRepository
+    let designGenerationRepository: DesignGenerationRepository
     let session: AuthSession
     let capture: CaptureSession
 
@@ -29,6 +30,7 @@ final class AppState {
         self.onboardingRepository = OnboardingRepository(client: client)
         self.circleRepository = CircleRepository(client: client)
         self.circleShareRepository = CircleShareRepository(client: client)
+        self.designGenerationRepository = DesignGenerationRepository(client: client)
         self.session = AuthSession()
         self.capture = CaptureSession()
     }
