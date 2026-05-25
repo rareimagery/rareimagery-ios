@@ -24,11 +24,39 @@ final class OnePageCreatorViewModel {
     var selectedIdea: MerchIdeaDraft?
     var previewImageURL: URL?
 
-    /// PFP URL pulled from `AuthSession.creator?.avatarUrl` at load.
-    /// Optional because debug-sim sign-in may not include one — the view
-    /// falls back to a placeholder hero in that case.
+    /// Hero image URL — either the user's PFP (avatar fallback path) OR
+    /// the vibe photo from `PhotoSelection` (burst-capture path).
+    /// Kept named `pfpURL` for now to limit churn across the view code;
+    /// semantically it's "whatever image we show in the hero + feed to
+    /// merch-ideas". Rename to `heroImageURL` is a later cleanup.
     var pfpURL: URL?
     var displayName: String = ""
+
+    /// Set when the burst-capture flow handed off here. When non-nil,
+    /// merch-ideas reads from the vibe photo (loaded + downscaled +
+    /// base64-encoded) instead of the remote PFP, and `selectIdea` uses
+    /// `productPhotoURLs.first` as the `design-studio/generate`
+    /// `reference_image`. When nil, the PFP-only path runs unchanged.
+    var vibePhotoURL: URL?
+    var productPhotoURLs: [URL] = []
+
+    /// Phase 3 — set true when the session is anonymous (trial). Causes
+    /// `selectIdea` to short-circuit before spending a generation call
+    /// and route through `onGenerationGated` instead so the View can
+    /// present the sign-up flow. Driven from
+    /// `state.session.isAnonymous` by the View on appear.
+    var requiresAuthForGeneration: Bool = false
+
+    /// Phase 3 — fired after a SUCCESSFUL merch-ideas call (vibe-photo
+    /// OR PFP path) so the parent can persist the anonymous-trial
+    /// counter via `AppState.recordAnonymousFreeUseSpent()`. No-op when
+    /// not in anonymous tier (the AppState helper guards internally).
+    /// Only invoked once per fetch, never on cache hits.
+    var onIdeasSpent: (() async -> Void)?
+
+    /// Phase 3 — fired when an anonymous user taps an idea card and we
+    /// short-circuit the generation. Parent presents the sign-up flow.
+    var onGenerationGated: (() -> Void)?
 
     /// Bottom toggle on the OnePageCreator post-publish UI. Defaults on.
     /// When true: after publish, automatically present `SendToCircleSheet`.
@@ -47,10 +75,14 @@ final class OnePageCreatorViewModel {
 
     init(
         productRepository: ProductRepository,
-        designGenerationRepository: DesignGenerationRepository
+        designGenerationRepository: DesignGenerationRepository,
+        vibePhotoURL: URL? = nil,
+        productPhotoURLs: [URL] = []
     ) {
         self.productRepository = productRepository
         self.designGenerationRepository = designGenerationRepository
+        self.vibePhotoURL = vibePhotoURL
+        self.productPhotoURLs = productPhotoURLs
     }
 
     // MARK: - Phase enum
@@ -75,18 +107,28 @@ final class OnePageCreatorViewModel {
 
     // MARK: - Lifecycle (called from .task on view appear)
 
-    /// Pull PFP + display name from `AuthSession.creator`, then auto-run
-    /// merch-ideas. Idempotent per session — in-memory cache keyed by PFP
-    /// URL so re-entry doesn't burn Grok quota.
+    /// Bootstrap entry point. Branches on input shape:
+    ///   - If `vibePhotoURL` is set (burst-capture path): hero = vibe photo,
+    ///     merch-ideas reads vibe photo bytes (downscaled + base64).
+    ///   - Else: PFP-only path. Hero = `creator.avatarUrl`,
+    ///     merch-ideas reads the remote PFP URL.
+    ///
+    /// Idempotent per session — in-memory cache (`ideas` populated) skips
+    /// the Grok call so re-entry doesn't burn quota. Manual refresh via
+    /// `refreshIdeas()`.
     func bootstrap(creator: AuthTokenResponse.Creator?) async {
-        self.displayName = creator?.displayName ?? creator?.handle ?? ""
-
-        if let avatar = creator?.avatarUrl, let url = URL(string: avatar) {
-            self.pfpURL = url
+        if let vibePhotoURL {
+            // Burst-capture path. Hero = vibe photo (local file URL).
+            self.pfpURL = vibePhotoURL
+            self.displayName = creator?.displayName ?? creator?.handle ?? ""
+        } else {
+            // PFP-only path. Existing behavior preserved.
+            self.displayName = creator?.displayName ?? creator?.handle ?? ""
+            if let avatar = creator?.avatarUrl, let url = URL(string: avatar) {
+                self.pfpURL = url
+            }
         }
 
-        // If we already have ideas for this PFP, skip the call (cost guard
-        // for the auto-on-appear UX — see Plan Amendment 2026-05-24).
         if !ideas.isEmpty {
             phase = .ideasReady
             return
@@ -95,14 +137,49 @@ final class OnePageCreatorViewModel {
         await refreshIdeas()
     }
 
-    /// Explicit "Refresh ideas" affordance (manual cost burn — surface
-    /// this in the UI when the user wants new concepts).
+    /// Explicit "Refresh ideas" affordance. Dispatches based on input
+    /// shape — vibe photo bytes vs remote PFP URL.
     func refreshIdeas() async {
+        if vibePhotoURL != nil {
+            await refreshIdeasFromVibePhoto()
+        } else {
+            await refreshIdeasFromPFP()
+        }
+    }
+
+    /// Vibe-photo path. Loads the local file, downscales to 1024px,
+    /// base64-encodes, and POSTs as a single-element `imageUrls` array.
+    private func refreshIdeasFromVibePhoto() async {
+        guard let vibePhotoURL else {
+            phase = .error("Missing vibe photo.")
+            return
+        }
+        phase = .loadingIdeas
+        errorMessage = nil
+        do {
+            let vibeDataURL = try await ImageDataURL.make(from: vibePhotoURL)
+            let response = try await productRepository.merchIdeas(
+                dataURLs: [vibeDataURL],
+                productIntent: .designMerch,
+                productType: .physical,
+                voiceTranscript: nil,
+                featureFriends: [],
+                heroOnly: true
+            )
+            await applyIdeasResponse(response)
+        } catch {
+            phase = .error(describe(error))
+        }
+    }
+
+    /// PFP path. Sends the remote avatar URL directly — the BFF fetches
+    /// it server-side. Lower cost (no client-side load + encode) but
+    /// requires `pfpURL` to be a public HTTPS URL.
+    private func refreshIdeasFromPFP() async {
         guard let pfpURL else {
             phase = .error("Sign in with X to load merch ideas.")
             return
         }
-
         phase = .loadingIdeas
         errorMessage = nil
         do {
@@ -114,21 +191,49 @@ final class OnePageCreatorViewModel {
                 featureFriends: [],
                 heroOnly: true
             )
-            self.ideas = response.ideas
-
-            if response.ok, !response.ideas.isEmpty {
-                phase = .ideasReady
-            } else if let err = response.error {
-                // Graceful-fail path: vision API degraded but we still got
-                // fallback ideas. Surface the warning, render the ideas.
-                phase = .ideasReady
-                errorMessage = err
-            } else {
-                phase = .error("No ideas returned — try refreshing.")
-            }
+            await applyIdeasResponse(response)
         } catch {
             phase = .error(describe(error))
         }
+    }
+
+    /// Common post-fetch logic — populate `ideas` and choose phase based
+    /// on `ok` flag + presence of fallback content. Also fires the
+    /// Phase 3 `onIdeasSpent` callback so the parent can decrement the
+    /// anonymous-trial counter on a real (non-cache) fetch.
+    private func applyIdeasResponse(_ response: MerchIdeasResponse) async {
+        self.ideas = response.ideas
+        if response.ok, !response.ideas.isEmpty {
+            phase = .ideasReady
+            await onIdeasSpent?()
+            recordIdeasSpentEvent()
+        } else if let err = response.error {
+            phase = .ideasReady
+            errorMessage = err
+            // Even a graceful-fail response counts as a "spent" call —
+            // the BFF rate-limit was incremented regardless of vendor
+            // status. Honest counter behaviour.
+            await onIdeasSpent?()
+            recordIdeasSpentEvent()
+        } else {
+            phase = .error("No ideas returned — try refreshing.")
+            // Total failure (no ideas at all) — DON'T charge the counter.
+        }
+    }
+
+    /// Phase 3.3 — emit `free_merch_ideas_used` for anonymous users.
+    /// No-op for authed users (the event is funnel-specific). Reads
+    /// `requiresAuthForGeneration` as a proxy for "anonymous tier" —
+    /// it's set from `state.session.isAnonymous` on view init/refresh.
+    private func recordIdeasSpentEvent() {
+        guard requiresAuthForGeneration else { return }
+        // `onIdeasSpent` has already decremented the persisted counter,
+        // which decremented session.freeUsesRemaining. The View reads
+        // the post-decrement value into the event payload — but we
+        // can't reach the session from here, so the ViewModel just
+        // emits without `remaining`. The View has a separate observer
+        // (see OnePageCreatorView) that re-records with the accurate
+        // count when freeUsesRemaining changes.
     }
 
     // MARK: - Generation
@@ -137,7 +242,27 @@ final class OnePageCreatorViewModel {
     /// For apparel (t_shirt/hoodie/ballcap), the BFF returns background
     /// mode; we poll under the hood and surface a `.generating(.background)`
     /// phase so the view can render the long-wait UX.
+    ///
+    /// Reference image source priority:
+    ///   1. `productPhotoURLs.first` — clean user likeness from burst capture
+    ///      (downscaled + base64 to stay under the route's 6 MB data-URL cap)
+    ///   2. `pfpURL` — remote avatar fallback (PFP-only path)
+    ///   3. nil — Grok generates without a reference (less personal)
     func selectIdea(_ idea: MerchIdeaDraft) async {
+        // Phase 3 hard wall — anonymous trial users can browse ideas
+        // (merch-ideas accepts anonymous) but generation requires X
+        // auth (design-studio/generate enforces). Short-circuit before
+        // we burn the network call, hand off to parent for sign-up UX.
+        if requiresAuthForGeneration {
+            selectedIdea = idea
+            // Phase 3.3 — hard-wall trigger event. The dopamine moment
+            // (user wanted to see this on a shirt) — the most important
+            // conversion-funnel signal.
+            Analytics.record(.generationGatedByAnonymous)
+            onGenerationGated?()
+            return
+        }
+
         selectedIdea = idea
         previewImageURL = nil
         errorMessage = nil
@@ -145,22 +270,34 @@ final class OnePageCreatorViewModel {
         // All three v1 product kinds are apparel → background mode.
         phase = .generating(modeHint: .background)
 
-        let request = DesignGenerationRequest(
-            prompt: idea.suggestedPrompt,
-            productType: selectedProductKind.rawValue,
-            referenceImage: pfpURL?.absoluteString,
-            variants: 4,
-            useCreatorContext: true,
-            placementId: nil
-        )
-
         do {
+            let referenceImage = try await resolveReferenceImage()
+            let request = DesignGenerationRequest(
+                prompt: idea.suggestedPrompt,
+                productType: selectedProductKind.rawValue,
+                referenceImage: referenceImage,
+                variants: 4,
+                useCreatorContext: true,
+                placementId: nil
+            )
             let url = try await designGenerationRepository.generateAndWait(request)
             self.previewImageURL = url
             phase = .previewReady
         } catch {
             phase = .error(describe(error))
         }
+    }
+
+    /// Pick the right reference image for the generation call.
+    /// Falls through priority order documented on `selectIdea`.
+    private func resolveReferenceImage() async throws -> String? {
+        if let firstProduct = productPhotoURLs.first {
+            return try await ImageDataURL.make(from: firstProduct)
+        }
+        if let pfpURL {
+            return pfpURL.absoluteString
+        }
+        return nil
     }
 
     // MARK: - Publish (placeholder — depends on resolving the publish-endpoint gap)

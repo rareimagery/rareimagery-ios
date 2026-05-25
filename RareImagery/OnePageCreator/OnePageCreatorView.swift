@@ -15,6 +15,23 @@ struct OnePageCreatorView: View {
     @Environment(AppState.self) private var state
     @State private var viewModel: OnePageCreatorViewModel?
     @State private var showSendToCircle = false
+    /// Phase 3 — flipped true when an anonymous user taps an idea card.
+    /// Drives the modal sign-up sheet (which currently posts a friendly
+    /// hand-off — actual X sign-in flow wiring is a follow-up).
+    @State private var showSignUpSheet = false
+
+    /// Optional burst-capture inputs. When `vibePhotoURL` is set, the
+    /// view skips the PFP path entirely and feeds the vibe photo to
+    /// merch-ideas; `productPhotoURLs.first` becomes the `reference_image`
+    /// for design-studio/generate. When nil, falls back to the PFP path
+    /// for backwards compat (debug menus / pre-burst-capture entry points).
+    let vibePhotoURL: URL?
+    let productPhotoURLs: [URL]
+
+    init(vibePhotoURL: URL? = nil, productPhotoURLs: [URL] = []) {
+        self.vibePhotoURL = vibePhotoURL
+        self.productPhotoURLs = productPhotoURLs
+    }
 
     var body: some View {
         Group {
@@ -31,10 +48,27 @@ struct OnePageCreatorView: View {
             // Lazily instantiate so the view doesn't construct a VM until
             // it has the AppState environment in scope.
             if viewModel == nil {
-                viewModel = OnePageCreatorViewModel(
+                let vm = OnePageCreatorViewModel(
                     productRepository: state.productRepository,
-                    designGenerationRepository: state.designGenerationRepository
+                    designGenerationRepository: state.designGenerationRepository,
+                    vibePhotoURL: vibePhotoURL,
+                    productPhotoURLs: productPhotoURLs
                 )
+                // Phase 3 wiring: ViewModel stays ignorant of session state.
+                // View provides callbacks that talk to AppState.
+                vm.requiresAuthForGeneration = state.session.isAnonymous
+                vm.onIdeasSpent = { [weak state] in
+                    await state?.recordAnonymousFreeUseSpent()
+                }
+                vm.onGenerationGated = {
+                    showSignUpSheet = true
+                }
+                viewModel = vm
+            } else {
+                // Keep the gating flag in sync if session state changes
+                // mid-session (e.g. user signs in via the modal, returns
+                // to OnePageCreator with a real token in `.accessToken`).
+                viewModel?.requiresAuthForGeneration = state.session.isAnonymous
             }
             await viewModel?.bootstrap(creator: state.session.creator)
         }
@@ -48,6 +82,17 @@ struct OnePageCreatorView: View {
                     pfpURL: viewModel.pfpURL,
                     displayName: viewModel.displayName
                 )
+
+                // Phase 3.2 — trial counter chip. Visible only while the
+                // user is anonymous AND has free uses left. SignUpReminderBanner
+                // picks up at 0 (rendered near the CTA below), so this never
+                // shows alongside the banner. Pulled to a tight negative
+                // top-pad to feel like part of the hero composition rather
+                // than a separate row.
+                if state.session.isAnonymous && state.session.freeUsesRemaining > 0 {
+                    FreeUsesChip(remaining: state.session.freeUsesRemaining)
+                        .padding(.top, -16)
+                }
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("What do you want to create?")
@@ -77,10 +122,28 @@ struct OnePageCreatorView: View {
 
                 alsoSendToCircleToggle(viewModel: viewModel)
 
+                // Phase 3 — persistent soft reminder when the anonymous
+                // trial user has spent their 3 free vibe-photo ideas.
+                // The wall on actual generation lives in
+                // OnePageCreatorViewModel.selectIdea (via
+                // `requiresAuthForGeneration`); this banner is the
+                // ambient nudge before they hit it.
+                if state.session.shouldShowSignUpReminder {
+                    SignUpReminderBanner(onConnectX: {
+                        showSignUpSheet = true
+                    })
+                }
+
                 CreateAndLaunchButton(
                     state: buttonState(for: viewModel),
                     action: {
-                        Task { await runPublish(viewModel: viewModel) }
+                        // Same gating for the bottom CTA — Create+Launch
+                        // also requires X auth (provision-store + publish).
+                        if state.session.isAnonymous {
+                            showSignUpSheet = true
+                        } else {
+                            Task { await runPublish(viewModel: viewModel) }
+                        }
                     }
                 )
                 .padding(.horizontal, 16)
@@ -107,6 +170,61 @@ struct OnePageCreatorView: View {
                 SendToCircleSheet(draft: synthesizeDraft(from: idea, kind: viewModel.selectedProductKind))
                     .environment(state)
             }
+        }
+        .sheet(isPresented: $showSignUpSheet) {
+            // Phase 3.1 — present the existing SignInView in the sheet.
+            // Zero new auth code: SignInView's AuthCoordinator handles
+            // ASWebAuthenticationSession + token exchange + AuthSession
+            // state transition. The observer below catches the
+            // .anonymous → .signedIn flip and dismisses this sheet
+            // automatically (the user doesn't have to tap Done).
+            SignInView()
+                .environment(state)
+        }
+        .onChange(of: state.session.isSignedIn) { _, isSignedIn in
+            // The conversion moment. When AuthCoordinator completes the
+            // X OAuth round-trip, AuthSession.apply(tokens:) flips status
+            // to .signedIn → this fires. Two things happen:
+            //   1. Dismiss the sign-up sheet (the auth flow already
+            //      collapsed back from ASWebAuthenticationSession; the
+            //      SignInView underneath has nothing more to do).
+            //   2. Clear the ViewModel's generation gate so a subsequent
+            //      idea tap proceeds straight into design-studio/generate
+            //      instead of re-opening this same sheet.
+            guard isSignedIn else { return }
+            showSignUpSheet = false
+            // Inside content(viewModel:), the parameter is non-optional.
+            // Mutating .requiresAuthForGeneration here flows through to
+            // the @State-backed @Observable instance held one level up.
+            viewModel.requiresAuthForGeneration = false
+        }
+        // Phase 3.3 — funnel events from the View side. ViewModel emits
+        // events it has direct context for; these two need View-level
+        // state that doesn't belong in the VM.
+        .onChange(of: state.session.shouldShowSignUpReminder) { wasShowing, isShowing in
+            // `false → true` transition only — repeat re-renders don't
+            // re-fire. Matches the spec: "first time the banner becomes
+            // visible," not every layout pass.
+            if !wasShowing && isShowing {
+                Analytics.record(.signUpReminderShown)
+            }
+        }
+        .onChange(of: showSignUpSheet) { wasShown, isShown in
+            // Sheet present → user is now looking at SignInView. Counts
+            // as auth-flow initiated regardless of which CTA triggered
+            // it (banner button, gated idea tap, or Create+Launch).
+            if !wasShown && isShown {
+                Analytics.record(.xAuthInitiatedFromReminder)
+            }
+        }
+        .onChange(of: state.session.freeUsesRemaining) { _, remaining in
+            // Pair with the ViewModel's `recordIdeasSpentEvent`. The VM
+            // can't reach `state.session.freeUsesRemaining` itself, so
+            // the View observes the decrement and records the post-spend
+            // count. Only fires while anonymous (the counter doesn't
+            // decrement otherwise).
+            guard state.session.isAnonymous else { return }
+            Analytics.record(.freeMerchIdeasUsed(remaining: remaining))
         }
     }
 

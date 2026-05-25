@@ -12,6 +12,17 @@ public actor KeychainStore {
         case accessToken = "ri.access_token"
         case refreshToken = "ri.refresh_token"
         case accessTokenExpiry = "ri.access_token_expiry"
+
+        // Phase 3 — anonymous trial mode.
+        // `anonymousDeviceId` is the client-generated UUID that the BFF
+        // rate-limits by; it survives across token refreshes and ideally
+        // across app launches so a returning trial user keeps the same
+        // device identity (and thus their already-spent counter).
+        // `anonymousFreeUsesUsed` is the per-device counter for the
+        // soft sign-up reminder (decimal string, "0" through "3+").
+        // Cleared explicitly on X sign-in via `clearAnonymousState()`.
+        case anonymousDeviceId = "ri.anonymous_device_id"
+        case anonymousFreeUsesUsed = "ri.anonymous_free_uses_used"
     }
 
     private let service: String
@@ -86,5 +97,16 @@ public actor KeychainStore {
         for key in [Key.accessToken, .refreshToken, .accessTokenExpiry] {
             try remove(key)
         }
+    }
+
+    /// Phase 3 — clear anonymous-trial state. Called when a trial user
+    /// successfully X-auths to leave a clean slate (the production
+    /// tokens take over via `.accessToken`/.refreshToken`). Idempotent.
+    /// Deliberately NOT part of `clearAll` so a sign-out doesn't
+    /// re-arm the free trial — once a user has converted, returning to
+    /// trial would be misleading.
+    public func clearAnonymousState() throws {
+        try remove(.anonymousDeviceId)
+        try remove(.anonymousFreeUsesUsed)
     }
 }

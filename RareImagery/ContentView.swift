@@ -48,6 +48,19 @@ struct ContentView: View {
             } else {
                 MainTabView()
             }
+
+        case .anonymous:
+            // Phase 3 — anonymous trial user. Lands directly in MainTabView
+            // (skipping SignInView and LivePreviewView) per the
+            // "make the first 3 fun and free" principle. OnePageCreator
+            // and any sibling tab that hits authed-only routes will
+            // surface SignUpReminderBanner / sign-up sheets in-place when
+            // the trial budget runs out. The dedicated burst-capture
+            // entry point that primes OnePageCreator with vibe + product
+            // photos is wired separately (user's PhotoSelection module);
+            // until that lands, anonymous users navigate the existing
+            // shell with per-screen gating active.
+            MainTabView()
         }
     }
 
