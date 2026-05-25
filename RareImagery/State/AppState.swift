@@ -36,6 +36,17 @@ final class AppState {
         self.anonymousAuthRepository = AnonymousAuthRepository(client: client)
         self.publishProductRepository = PublishProductRepository(client: client)
         self.session = AuthSession()
+
+        // Phase 4.2 — Analytics dispatch swap. Configure ONCE here so
+        // every Analytics.record(_:) call from anywhere in the app
+        // (AppState bootstrap, ViewModels, View observers) reaches
+        // both the console log AND the BFF /api/v1/telemetry/event
+        // endpoint without per-call ceremony.
+        //
+        // sessionId is a fresh UUID per app launch — groups events
+        // from one user session in the Drupal telemetry_event table
+        // so cohort + funnel queries can group by `session_id`.
+        Analytics.configure(client: client, sessionId: UUID().uuidString.lowercased())
         self.capture = CaptureSession()
     }
 

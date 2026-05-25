@@ -69,22 +69,130 @@ public enum AnalyticsEvent: Sendable, Equatable {
 
 /// Single emit point. Call sites stay stable across implementation swaps.
 ///
-/// To wire a real service later, replace the body — add a SDK init in
-/// `AppState.init()` (or `RareImageryApp`'s `init`) and have `record(_:)`
-/// forward to the SDK. No call-site changes required.
+/// Phase 4.2 swap: `record(_:)` now POSTs to the BFF
+/// `/api/v1/telemetry/event` endpoint in addition to the console log.
+/// Console output stays for dev/Xcode visibility; BFF dispatch is
+/// fire-and-forget (the Task is detached; failures log but never throw).
+///
+/// Configuration:
+///   - `Analytics.configure(client:sessionId:)` is called once from
+///     `AppState.init()` after the APIClient is created.
+///   - Before configure runs OR if it's skipped (tests, previews), the
+///     BFF dispatch is silently no-op — only console output happens.
+///
+/// Thread safety: the configuration statics are set exactly once during
+/// `AppState.init()` (MainActor) and read from arbitrary contexts
+/// thereafter. `nonisolated(unsafe)` documents the post-init-immutable
+/// invariant explicitly under Swift 6 strict concurrency.
 public enum Analytics {
+
+    nonisolated(unsafe) private static var client: APIClient?
+    nonisolated(unsafe) private static var sessionId: String?
+
+    /// One-time configuration from `AppState.init()`. Safe to call
+    /// multiple times — last value wins — but in practice once per
+    /// app launch. `sessionId` groups events from a single app
+    /// launch in the Drupal telemetry table.
+    public static func configure(client: APIClient, sessionId: String) {
+        Self.client = client
+        Self.sessionId = sessionId
+    }
+
     public static func record(_ event: AnalyticsEvent) {
+        consolePrint(event)
+
+        // Fire-and-forget BFF dispatch. Detached so it can't block the
+        // caller (most call sites are SwiftUI bodies / view modifiers
+        // where blocking would jank the UI). Errors log to console
+        // only — analytics failures must NEVER surface in the UX.
+        guard let client = Self.client else { return }
+        let sessionId = Self.sessionId
+        let clientEventId = UUID().uuidString.lowercased()
+
+        Task.detached(priority: .background) {
+            do {
+                try await dispatch(
+                    client: client,
+                    event: event,
+                    sessionId: sessionId,
+                    clientEventId: clientEventId,
+                )
+            } catch {
+                // eslint-style: log without throwing. iOS analytics
+                // failures should never bubble — they're just lost
+                // data points. The Drupal dedup on client_event_id
+                // means a retry queue is trivial to add later.
+                print("[analytics] dispatch failed for \(event.name): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Dispatch
+
+    private static func dispatch(
+        client: APIClient,
+        event: AnalyticsEvent,
+        sessionId: String?,
+        clientEventId: String,
+    ) async throws {
+        let request = TelemetryIngestRequest(
+            eventType: event.name,
+            payload: event.properties.isEmpty ? nil : event.properties,
+            clientEventId: clientEventId,
+            sessionId: sessionId,
+            subjectType: nil,
+            subjectId: nil,
+        )
+        let data = try JSONEncoder().encode(request)
+        let endpoint = APIEndpoint(
+            path: "/api/v1/telemetry/event",
+            method: .post,
+            body: data,
+            requiresAuth: true,
+            contentType: "application/json",
+            // Short — the Drupal insert is single-row + indexed. Longer
+            // wouldn't help; iOS Analytics is fire-and-forget anyway.
+            timeout: 8,
+        )
+        // sendRaw — we don't care about the response body, only that
+        // the call landed. Throws on non-2xx; the catch logs.
+        _ = try await client.sendRaw(endpoint)
+    }
+
+    // MARK: - Console output (unchanged from Phase 3.3)
+
+    private static func consolePrint(_ event: AnalyticsEvent) {
         let props = event.properties
         if props.isEmpty {
             print("[analytics] \(event.name)")
         } else {
-            // Sort props for stable log output — easier to grep + diff
-            // when manually tailing the simulator console.
             let propString = props
                 .sorted { $0.key < $1.key }
                 .map { "\($0.key)=\($0.value)" }
                 .joined(separator: " ")
             print("[analytics] \(event.name) \(propString)")
         }
+    }
+}
+
+/// Wire request shape — matches `TelemetryEventSchema` in
+/// x-store-next/src/app/api/v1/telemetry/event/route.ts. Actor fields
+/// are deliberately absent — the BFF derives them from auth and would
+/// overwrite anything we sent.
+private struct TelemetryIngestRequest: Encodable {
+    let eventType: String
+    let payload: [String: String]?
+    let clientEventId: String
+    let sessionId: String?
+    let subjectType: String?
+    let subjectId: String?
+
+    enum CodingKeys: String, CodingKey {
+        case eventType = "event_type"
+        case payload
+        case clientEventId = "client_event_id"
+        case sessionId = "session_id"
+        case subjectType = "subject_type"
+        case subjectId = "subject_id"
     }
 }
