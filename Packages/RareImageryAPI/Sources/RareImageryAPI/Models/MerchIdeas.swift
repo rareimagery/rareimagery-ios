@@ -72,6 +72,14 @@ public struct MerchIdeaDraft: Decodable, Sendable, Equatable, Identifiable {
     public let whyItWorks: String                // ≤300 chars
     public let flags: [String]?                  // e.g. ["needs_review", "low_confidence"]
 
+    /// Phase 4.3 — UUID of the `idea_record` row persisted by the BFF
+    /// after Grok returned. `nil` only on the legacy code path (BFF
+    /// pre-4.3 or telemetry write failed for this slot). Threaded
+    /// into `DesignGenerationRequest.ideaRecordUuid` on tap so the
+    /// resulting `design_record` can link back to the idea — closing
+    /// the merch-idea → design → product lineage chain.
+    public var ideaRecordId: String?
+
     public enum Category: String, Decodable, Sendable {
         case tShirt = "t-shirt"
         case hoodie
@@ -117,5 +125,6 @@ public struct MerchIdeaDraft: Decodable, Sendable, Equatable, Identifiable {
     private enum CodingKeys: String, CodingKey {
         case title, description, suggestedPrompt, category, tags
         case estimatedPrice, whyItWorks, flags
+        case ideaRecordId = "idea_record_id"
     }
 }

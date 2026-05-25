@@ -24,6 +24,15 @@ final class OnePageCreatorViewModel {
     var selectedIdea: MerchIdeaDraft?
     var previewImageURL: URL?
 
+    /// Phase 4.3 — UUID of the `design_record` for the most recent
+    /// successful generation. Captured from `GeneratedDesignResult` on
+    /// `selectIdea` completion and threaded into `PublishProductRequest`
+    /// on `createProductAndStore` so the resulting commerce_product is
+    /// linked back to the design (and from there to the originating
+    /// merch idea, if any). `nil` when telemetry write failed for this
+    /// generation — publish still succeeds, just without the lineage link.
+    var designRecordId: String?
+
     /// Hero image URL — either the user's PFP (avatar fallback path) OR
     /// the vibe photo from `PhotoSelection` (burst-capture path).
     /// Kept named `pfpURL` for now to limit churn across the view code;
@@ -272,6 +281,7 @@ final class OnePageCreatorViewModel {
 
         selectedIdea = idea
         previewImageURL = nil
+        designRecordId = nil
         errorMessage = nil
 
         // All three v1 product kinds are apparel → background mode.
@@ -285,10 +295,15 @@ final class OnePageCreatorViewModel {
                 referenceImage: referenceImage,
                 variants: 4,
                 useCreatorContext: true,
-                placementId: nil
+                placementId: nil,
+                // Phase 4.3 — thread the idea UUID so design_record links
+                // back to idea_record. `nil` when the BFF's merch-ideas
+                // telemetry write failed for this slot (best-effort).
+                ideaRecordUuid: idea.ideaRecordId
             )
-            let url = try await designGenerationRepository.generateAndWait(request)
-            self.previewImageURL = url
+            let result = try await designGenerationRepository.generateAndWait(request)
+            self.previewImageURL = result.imageURL
+            self.designRecordId = result.designRecordId
             phase = .previewReady
         } catch {
             phase = .error(describe(error))
@@ -351,7 +366,12 @@ final class OnePageCreatorViewModel {
             imageUrl: previewImageURL.absoluteString,
             priceLow: priceLow,
             priceHigh: priceHigh,
-            designRecordUuid: nil,  // Phase 4.3 threads this when merch-ideas/generate write design_record rows
+            // Phase 4.3 — captured from GeneratedDesignResult on
+            // selectIdea. Drupal sets design_record.published_at +
+            // design_record.published_commerce_product_id when this
+            // UUID resolves. `nil` keeps publish working unchanged
+            // when the telemetry write failed upstream.
+            designRecordUuid: designRecordId,
             tags: idea.tags.isEmpty ? nil : idea.tags
         )
 

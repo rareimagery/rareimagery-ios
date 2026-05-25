@@ -18,6 +18,12 @@ public struct DesignGenerationRequest: Encodable, Sendable {
     public let variants: Int?
     public let useCreatorContext: Bool?
     public let placementId: String?
+    /// Phase 4.3 — UUID of the `idea_record` the user picked from
+    /// merch-ideas. Optional: nil means the user typed a free-form
+    /// prompt or the merch-ideas response predates 4.3 telemetry.
+    /// The BFF threads this into `design_record.idea_record_id` so
+    /// the lineage chain idea → design → product is intact.
+    public let ideaRecordUuid: String?
 
     public init(
         prompt: String,
@@ -25,7 +31,8 @@ public struct DesignGenerationRequest: Encodable, Sendable {
         referenceImage: String? = nil,
         variants: Int? = 4,
         useCreatorContext: Bool? = true,
-        placementId: String? = nil
+        placementId: String? = nil,
+        ideaRecordUuid: String? = nil
     ) {
         self.prompt = prompt
         self.productType = productType
@@ -33,6 +40,7 @@ public struct DesignGenerationRequest: Encodable, Sendable {
         self.variants = variants
         self.useCreatorContext = useCreatorContext
         self.placementId = placementId
+        self.ideaRecordUuid = ideaRecordUuid
     }
 
     enum CodingKeys: String, CodingKey {
@@ -42,6 +50,7 @@ public struct DesignGenerationRequest: Encodable, Sendable {
         case variants
         case useCreatorContext = "use_creator_context"
         case placementId = "placement_id"
+        case ideaRecordUuid = "idea_record_uuid"
     }
 }
 
@@ -70,6 +79,14 @@ public struct DesignGenerationResponse: Decodable, Sendable {
     public let pollUrl: String?
     public let pollIntervalMs: Int?
 
+    /// Phase 4.3 — UUID of the `design_record` written by the BFF.
+    /// Populated in fast mode (inline write) and read off the polling
+    /// endpoint in background mode (the after() block writes the row
+    /// before flipping the task to .completed). Threaded into the
+    /// publish call as `designRecordUuid` so commerce_product links
+    /// back to the design and the originating idea.
+    public let designRecordId: String?
+
     public enum Mode: String, Decodable, Sendable {
         case fast
         case background
@@ -87,6 +104,7 @@ public struct DesignGenerationResponse: Decodable, Sendable {
         case taskKey = "task_key"
         case pollUrl = "poll_url"
         case pollIntervalMs = "poll_interval_ms"
+        case designRecordId = "design_record_id"
     }
 }
 
@@ -94,13 +112,17 @@ public struct DesignGenerationResponse: Decodable, Sendable {
 /// `status` transitions: `pending → completed | failed`. On completion,
 /// `imageUrl` is populated (typically a data URL after print-area fitting).
 public struct DesignTaskStatus: Decodable, Sendable {
-    public let taskKey: String
+    public let taskKey: String?
     public let status: Status
     public let productType: String?
     public let prompt: String?
     public let imageUrl: String?
     public let imageUrls: [String]?
     public let error: String?
+    /// Phase 4.3 — set when the BFF's background after() block wrote
+    /// the design_record before flipping the task to completed.
+    /// `nil` while pending and on legacy tasks predating 4.3.
+    public let designRecordId: String?
     public let createdAt: String?
     public let completedAt: String?
 
@@ -118,7 +140,27 @@ public struct DesignTaskStatus: Decodable, Sendable {
         case imageUrl = "image_url"
         case imageUrls = "image_urls"
         case error
+        case designRecordId = "design_record_id"
         case createdAt = "created_at"
         case completedAt = "completed_at"
+    }
+}
+
+/// Phase 4.3 — return shape for `DesignGenerationRepository.generateAndWait`.
+/// Folds the resolved image URL and the lineage UUID into a single value
+/// so callers (OnePageCreatorViewModel) can thread both through to the
+/// publish call without juggling two awaited values.
+public struct GeneratedDesignResult: Sendable {
+    public let imageURL: URL
+    /// `nil` when the BFF telemetry write failed for this generation,
+    /// when the BFF predates Phase 4.3, or — in background mode —
+    /// when the polled task completed but design_record_id wasn't
+    /// surfaced (legacy task queue rows). Publish still succeeds; the
+    /// commerce_product just isn't lineage-linked.
+    public let designRecordId: String?
+
+    public init(imageURL: URL, designRecordId: String?) {
+        self.imageURL = imageURL
+        self.designRecordId = designRecordId
     }
 }

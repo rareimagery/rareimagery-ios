@@ -42,10 +42,16 @@ public actor DesignGenerationRepository {
         return try await client.send(endpoint, as: DesignGenerationResponse.self)
     }
 
-    /// Convenience: kick off + poll if background, return final image URL.
+    /// Convenience: kick off + poll if background, return final image URL
+    /// + the design_record UUID (Phase 4.3 lineage).
+    ///
     /// Throws if the task ends in `.failed`, if polling times out, or if
     /// the response is malformed (background mode without a poll_url).
-    public func generateAndWait(_ request: DesignGenerationRequest) async throws -> URL {
+    ///
+    /// `designRecordId` on the result is `nil` when the BFF telemetry
+    /// write failed for this generation or when the BFF predates 4.3.
+    /// Callers should still publish — lineage is best-effort, not required.
+    public func generateAndWait(_ request: DesignGenerationRequest) async throws -> GeneratedDesignResult {
         let initial = try await generate(request)
 
         switch initial.mode {
@@ -53,7 +59,7 @@ public actor DesignGenerationRepository {
             guard let urlString = initial.imageUrl, let url = URL(string: urlString) else {
                 throw DesignGenerationError.malformedResponse("fast mode missing image_url")
             }
-            return url
+            return GeneratedDesignResult(imageURL: url, designRecordId: initial.designRecordId)
 
         case .background:
             guard let taskKey = initial.taskKey else {
@@ -65,9 +71,9 @@ public actor DesignGenerationRepository {
     }
 
     /// Poll the task endpoint until status moves off `.pending`.
-    /// Returns the final image URL on `.completed`; throws on `.failed`
-    /// or if `maxPollingDuration` is exceeded.
-    public func pollUntilDone(taskKey: String, intervalMs: Int) async throws -> URL {
+    /// Returns the final image URL + design_record UUID on `.completed`;
+    /// throws on `.failed` or if `maxPollingDuration` is exceeded.
+    public func pollUntilDone(taskKey: String, intervalMs: Int) async throws -> GeneratedDesignResult {
         let deadline = Date().addingTimeInterval(maxPollingDuration)
         let interval = max(1, intervalMs) // never poll faster than 1Hz
 
@@ -90,7 +96,7 @@ public actor DesignGenerationRepository {
                 guard let urlString = status.imageUrl, let url = URL(string: urlString) else {
                     throw DesignGenerationError.malformedResponse("completed task missing image_url")
                 }
-                return url
+                return GeneratedDesignResult(imageURL: url, designRecordId: status.designRecordId)
             case .failed:
                 throw DesignGenerationError.taskFailed(status.error ?? "Image generation failed")
             }
