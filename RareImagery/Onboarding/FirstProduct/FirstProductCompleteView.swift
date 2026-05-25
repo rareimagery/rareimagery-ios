@@ -27,6 +27,7 @@ struct FirstProductCompleteView: View {
 
     @State private var iconScale: CGFloat = 0.7
     @State private var iconOpacity: Double = 0
+    @State private var showSendToCircle = false
 
     var body: some View {
         ScrollView {
@@ -44,6 +45,8 @@ struct FirstProductCompleteView: View {
 
                 shareCard
 
+                sendToCircleButton
+
                 Spacer().frame(height: 12)
 
                 continueButton
@@ -59,6 +62,12 @@ struct FirstProductCompleteView: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 iconScale = 1.0
                 iconOpacity = 1.0
+            }
+        }
+        .sheet(isPresented: $showSendToCircle) {
+            if let draft = viewModel.createdDraft {
+                SendToCircleSheet(draft: draft)
+                    .environment(state)
             }
         }
     }
@@ -149,6 +158,46 @@ struct FirstProductCompleteView: View {
                 .overlay(Capsule().stroke(AppColor.border, lineWidth: 1))
             }
         }
+    }
+
+    /// New purple "Send to Circle" CTA — sits between `shareCard` and
+    /// `continueButton` per mock2. The orange "NEW" badge drops once
+    /// the user has tapped it for the first time (handled in a future
+    /// feature flag — for now it always shows).
+    ///
+    /// Gated on `viewModel.createdDraft != nil` because the sheet needs
+    /// a draft to render the preview header.
+    private var sendToCircleButton: some View {
+        Button {
+            guard viewModel.createdDraft != nil else { return }
+            showSendToCircle = true
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.3.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Send to Circle for feedback")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(AppColor.accent)
+                .clipShape(Capsule())
+
+                Text("NEW")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(AppColor.cta, in: Capsule())
+                    .offset(x: 6, y: -8)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.createdDraft == nil)
+        .opacity(viewModel.createdDraft == nil ? 0.4 : 1)
+        .accessibilityLabel("Send to Circle for feedback")
     }
 
     private var continueButton: some View {
