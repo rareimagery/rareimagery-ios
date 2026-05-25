@@ -51,6 +51,7 @@ struct OnePageCreatorView: View {
                 let vm = OnePageCreatorViewModel(
                     productRepository: state.productRepository,
                     designGenerationRepository: state.designGenerationRepository,
+                    publishProductRepository: state.publishProductRepository,
                     vibePhotoURL: vibePhotoURL,
                     productPhotoURLs: productPhotoURLs
                 )

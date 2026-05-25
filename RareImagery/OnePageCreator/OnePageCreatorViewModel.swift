@@ -72,15 +72,22 @@ final class OnePageCreatorViewModel {
     /// `MerchIdeasRepository` that collided with the existing types.)
     private let productRepository: ProductRepository
     private let designGenerationRepository: DesignGenerationRepository
+    /// Phase 4.4 — wraps POST /api/v1/design-studio/publish for the
+    /// Create+Launch step. Optional in the initializer for backwards-
+    /// compat with any caller that hasn't been updated yet (View
+    /// supplies it from AppState).
+    private let publishProductRepository: PublishProductRepository?
 
     init(
         productRepository: ProductRepository,
         designGenerationRepository: DesignGenerationRepository,
+        publishProductRepository: PublishProductRepository? = nil,
         vibePhotoURL: URL? = nil,
         productPhotoURLs: [URL] = []
     ) {
         self.productRepository = productRepository
         self.designGenerationRepository = designGenerationRepository
+        self.publishProductRepository = publishProductRepository
         self.vibePhotoURL = vibePhotoURL
         self.productPhotoURLs = productPhotoURLs
     }
@@ -302,25 +309,59 @@ final class OnePageCreatorViewModel {
 
     // MARK: - Publish (placeholder — depends on resolving the publish-endpoint gap)
 
-    /// `Create my shirt + launch store` — provisions the store (idempotent
-    /// no-op if it exists) and publishes the product.
+    /// `Create my shirt + launch store` — publishes the generated
+    /// design as a real commerce_product in the creator's storefront.
     ///
-    /// ⚠ The "publish product from generated design" endpoint is the gap
-    /// flagged in the Plan Amendment. Until it lands, this method only
-    /// runs the store-provision step and returns a synthetic id so the
-    /// view can move to `.published` for Send-to-Circle hookup testing.
+    /// Phase 4.4 closes the previous stub. Requires:
+    ///   - a generated mockup (`previewImageURL` populated by selectIdea)
+    ///   - a selected idea (for title/description/price)
+    ///   - authed session (anonymous users hit the hard wall before this)
+    ///
+    /// On success, `phase = .published(productId:)` with the real
+    /// commerce_product UUID. The View's `runPublish` reads this and
+    /// optionally presents the SendToCircleSheet if the toggle is on.
+    ///
+    /// If the user has no store yet, the backend returns 404 NO_STORE;
+    /// we surface that as an actionable error so the View can route
+    /// to the provision-store flow.
     func createProductAndStore() async {
-        phase = .publishing
-        do {
-            // TODO: call provisionCreatorAction via OnboardingRepository
-            //       (already idempotent — see provision-store/route.ts).
-            //       For now, simulate the round-trip latency.
-            try await Task.sleep(for: .milliseconds(800))
+        guard let idea = selectedIdea else {
+            phase = .error("Pick an idea before publishing.")
+            return
+        }
+        guard let previewImageURL else {
+            phase = .error("Generate a preview before publishing.")
+            return
+        }
 
-            // TODO: real product publish endpoint. Synthesize an id
-            //       so .published has something to carry.
-            let stub = UUID().uuidString
-            phase = .published(productId: stub)
+        phase = .publishing
+        errorMessage = nil
+
+        // Default price when Grok declined to estimate. Reasonable
+        // mid-tier merch price; the UI will eventually let the user
+        // override this before tapping Create.
+        let priceLow = idea.estimatedPrice.low ?? 25.0
+        let priceHigh = idea.estimatedPrice.high
+
+        let request = PublishProductRequest(
+            productKind: selectedProductKind.rawValue,
+            title: idea.title,
+            description: idea.description.isEmpty ? nil : idea.description,
+            shortDescription: nil,  // Drupal falls back to title
+            imageUrl: previewImageURL.absoluteString,
+            priceLow: priceLow,
+            priceHigh: priceHigh,
+            designRecordUuid: nil,  // Phase 4.3 threads this when merch-ideas/generate write design_record rows
+            tags: idea.tags.isEmpty ? nil : idea.tags
+        )
+
+        do {
+            guard let publishProductRepository else {
+                phase = .error("Publish is not wired in this build. (publishProductRepository is nil — pass it from AppState.)")
+                return
+            }
+            let response = try await publishProductRepository.publish(request)
+            phase = .published(productId: response.productUuid)
         } catch {
             phase = .error(describe(error))
         }

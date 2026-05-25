@@ -16,6 +16,7 @@ final class AppState {
     let circleShareRepository: CircleShareRepository
     let designGenerationRepository: DesignGenerationRepository
     let anonymousAuthRepository: AnonymousAuthRepository
+    let publishProductRepository: PublishProductRepository
     let session: AuthSession
     let capture: CaptureSession
 
@@ -33,6 +34,7 @@ final class AppState {
         self.circleShareRepository = CircleShareRepository(client: client)
         self.designGenerationRepository = DesignGenerationRepository(client: client)
         self.anonymousAuthRepository = AnonymousAuthRepository(client: client)
+        self.publishProductRepository = PublishProductRepository(client: client)
         self.session = AuthSession()
         self.capture = CaptureSession()
     }
