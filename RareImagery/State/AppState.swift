@@ -20,6 +20,13 @@ final class AppState {
     let session: AuthSession
     let capture: CaptureSession
 
+    /// ponytail: stub-everything data layer for the value-first funnel phase
+    /// (build the frontend now, connect the backend later). When true,
+    /// `CaptureCoordinator` returns a mock valuation instead of calling the live
+    /// `/api/vision/analyze`. Flipping this to false is the whole "connect the
+    /// backend" switch — no view changes needed.
+    let useMocks = true
+
     init() {
         self.configuration = APIConfiguration.fromBundle
         let keychain = KeychainStore()

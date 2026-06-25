@@ -62,6 +62,9 @@ struct CaptureFlowView: View {
 private struct DraftPreview: View {
     let draft: ProductDraft
     @Environment(AppState.self) private var state
+    @State private var coordinator = AuthCoordinator()
+    @State private var showSell = false
+    @State private var isAuthenticating = false
 
     var body: some View {
         ScrollView {
@@ -109,16 +112,52 @@ private struct DraftPreview: View {
                 }
 
                 Spacer(minLength: 24)
+
+                sellCTA
+
                 Button("New capture") {
                     state.capture.reset()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(AppColor.accent)
+                .buttonStyle(.bordered)
+                .tint(AppColor.textSecondary)
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(AppColor.background)
+        .sheet(isPresented: $showSell) {
+            QuickProductView(draft: draft, heroImageData: state.capture.hero?.jpegData)
+        }
+    }
+
+    /// Value-first hook: capture + valuation are free and pre-login; the account
+    /// wall sits here at the sell step. Anonymous → X sign-in (the draft persists
+    /// in the capture session through auth); signed-in → the sell sheet.
+    /// (Real storeless-draft adoption at signup is a backend open-loop.)
+    @ViewBuilder private var sellCTA: some View {
+        Button {
+            if state.session.isSignedIn {
+                showSell = true
+            } else {
+                Task {
+                    isAuthenticating = true
+                    await coordinator.signInWithX(state: state)
+                    isAuthenticating = false
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if isAuthenticating { ProgressView().tint(.black) }
+                Text(isAuthenticating ? "Connecting to X…" : "Create your store to sell")
+                    .font(AppFont.buttonLabel)
+            }
+            .foregroundStyle(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(AppColor.cta)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .disabled(isAuthenticating)
     }
 
     private func labelChip(_ text: String) -> some View {
@@ -134,6 +173,9 @@ private struct DraftPreview: View {
 
 /// Drives the `/api/vision/analyze` call. JSON + base64 data URLs.
 /// Each shot is pre-compressed to ≤1280px JPEG 0.85 before encoding.
+/// For multi-photo: only the user-selected 1-2 favorites are sent
+/// (for Grok Vision analysis + as official product hero pictures).
+/// Matches web PhotoCurationGrid + spec "select 1-2, trash the rest".
 @MainActor
 enum CaptureCoordinator {
     static func run(state: AppState) async {
@@ -143,22 +185,42 @@ enum CaptureCoordinator {
         guard capture.canAnalyze else { return }
         capture.phase = .working
 
-        // Move hero to front so `heroOnly: true` semantics match user intent.
+        // ponytail: stub path — return a mock valuation without the network so
+        // the value-first funnel is testable before the backend is connected.
+        // Flip `AppState.useMocks` to false to use the real productRepository.
+        if state.useMocks {
+            try? await Task.sleep(for: .seconds(1))
+            capture.phase = .ready(Self.mockDraft())
+            return
+        }
+
+        // Only send the selected favorites (1-2) for analysis.
+        // Order: put the current hero first if it's selected, else first selected.
+        let selectedShots = capture.shots.filter { capture.selectedFavoriteIds.contains($0.id) }
+        guard !selectedShots.isEmpty else {
+            capture.phase = .error("No favorites selected for analysis")
+            return
+        }
+
         let orderedShots: [CaptureSession.Shot] = {
-            guard capture.shots.indices.contains(capture.heroIndex) else { return capture.shots }
-            var rest = capture.shots
-            let hero = rest.remove(at: capture.heroIndex)
-            return [hero] + rest
+            if let hero = capture.hero, capture.selectedFavoriteIds.contains(hero.id) {
+                var rest = selectedShots.filter { $0.id != hero.id }
+                return [hero] + rest
+            } else {
+                return selectedShots
+            }
         }()
 
         let dataURLs = orderedShots.map { ImageCompression.toBase64DataURL($0.jpegData) }
 
         do {
+            // heroOnly: false since we may send 1-2; the backend will use all provided
+            // for analysis (and they become the product pictures).
             let result = try await products.analyze(
                 dataURLs: dataURLs,
                 intent: capture.intent,
                 voiceTranscript: capture.voiceTranscript.isEmpty ? nil : capture.voiceTranscript,
-                heroOnly: true
+                heroOnly: false
             )
             capture.phase = .ready(result.draft)
         } catch {
@@ -169,5 +231,25 @@ enum CaptureCoordinator {
     private static func message(_ error: Error) -> String {
         if let api = error as? APIError { return api.userFacingMessage }
         return error.localizedDescription
+    }
+
+    /// ponytail: hardcoded valuation for the stubbed (useMocks) path. Mirrors a
+    /// realistic `/api/vision/analyze` resale draft so the result/hook screen has
+    /// a value to show without a backend.
+    private static func mockDraft() -> ProductDraft {
+        ProductDraft(
+            title: "Vintage Levi's Denim Jacket",
+            summary: "Washed indigo trucker jacket — looks early-'90s, great fade.",
+            description: "Heavyweight denim, classic red tab, light wear at the cuffs. A solid resale staple.",
+            category: nil,
+            condition: nil,
+            brand: "Levi's",
+            suggestedPriceLow: 45,
+            suggestedPriceHigh: 80,
+            tags: ["denim", "vintage", "levis", "jacket"],
+            handmade: false,
+            confidence: 0.86,
+            flags: nil
+        )
     }
 }
