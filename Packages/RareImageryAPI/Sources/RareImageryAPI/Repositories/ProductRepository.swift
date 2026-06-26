@@ -32,6 +32,7 @@ public actor ProductRepository {
         let productIntent: String
         let voiceTranscript: String?
         let heroOnly: Bool
+        let source: String?   // "photo" | "video" — tags the analysis server-side
     }
 
     /// Calls `/api/vision/analyze`. `dataURLs` should be JPEG base64 data URLs:
@@ -41,7 +42,8 @@ public actor ProductRepository {
         dataURLs: [String],
         intent: ProductIntent = .resell,
         voiceTranscript: String? = nil,
-        heroOnly: Bool = true
+        heroOnly: Bool = true,
+        source: String? = nil
     ) async throws -> VisionResult {
         guard !dataURLs.isEmpty else {
             throw APIError.badRequest(code: nil, message: "analyze called with zero images")
@@ -54,7 +56,8 @@ public actor ProductRepository {
             imageUrls: dataURLs,
             productIntent: AnalyzeIntent(from: intent).rawValue,
             voiceTranscript: voiceTranscript?.isEmpty == true ? nil : voiceTranscript,
-            heroOnly: heroOnly
+            heroOnly: heroOnly,
+            source: source
         )
 
         // Force camelCase keys — APIEndpoint.json would convert to snake_case

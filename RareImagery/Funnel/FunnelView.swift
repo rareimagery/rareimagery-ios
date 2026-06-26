@@ -1,4 +1,5 @@
 import SwiftUI
+import RareImageryAPI
 
 /// Value-first pre-login **Video Submission Flow** — Instructions → Record →
 /// Processing → Result. Design source:
@@ -9,6 +10,7 @@ import SwiftUI
 /// `from-video` valuation. The account wall sits on the Result CTA.
 struct VideoSubmissionFunnelView: View {
     @State private var vm = FunnelViewModel()
+    @Environment(AppState.self) private var state
 
     var body: some View {
         ZStack {
@@ -21,6 +23,10 @@ struct VideoSubmissionFunnelView: View {
         }
         .preferredColorScheme(.dark)
         .animation(.easeInOut(duration: 0.25), value: vm.screen)
+        .task {
+            vm.appState = state
+            await vm.prepareCamera()
+        }
     }
 }
 
@@ -59,6 +65,9 @@ final class FunnelViewModel {
     var seconds = 0
     var promptIndex = 0
     var valuation: FunnelValuation?
+    var errorMessage: String?
+    var appState: AppState?
+    let capture = VideoCaptureService()
 
     let prompts = ["What is it?", "How old is it?", "Any flaws or wear?",
                    "What makes it rare?", "Where's it from?"]
@@ -70,9 +79,18 @@ final class FunnelViewModel {
 
     func openCamera() { screen = .record }
 
+    /// Camera + mic permission, then start the AVCaptureSession. Call on appear.
+    func prepareCamera() async {
+        if await capture.requestPermissions() {
+            await capture.configureIfNeeded()
+        } else {
+            errorMessage = "Camera & microphone access are needed to record."
+        }
+    }
+
     func startRecording() {
         seconds = 0; promptIndex = 0; screen = .recording
-        // Phase 3: begin real AVFoundation video+audio capture here.
+        capture.startRecording()
         ticker = Task { [weak self] in
             var elapsed = 0
             while !Task.isCancelled {
@@ -88,13 +106,43 @@ final class FunnelViewModel {
     func stopRecording() {
         ticker?.cancel(); ticker = nil
         screen = .processing
-        // Phase 5: upload video + STT transcript -> POST /api/products/from-video.
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(2.2))
             guard let self else { return }
-            self.valuation = .mock
-            self.screen = .result
+            let url = await self.capture.stopRecording()
+            await self.process(clip: url)
         }
+    }
+
+    /// On-device reduction + valuation (hybrid). Frames + transcript are always
+    /// produced here (the Grok-independent work); the valuation is mocked while
+    /// `useMocks` is on, real otherwise. Raw-clip upload is fired async + gated.
+    private func process(clip url: URL?) async {
+        var frames: [String] = []
+        var transcript: String?
+        if let url {
+            frames = await FrameSelector.selectFrames(from: url, maxCount: 4)
+            transcript = await SpeechService.transcribe(url: url)
+        }
+
+        if let appState, !appState.useMocks, !frames.isEmpty {
+            do {
+                let result = try await appState.productRepository.analyze(
+                    dataURLs: frames, intent: .resell,
+                    voiceTranscript: transcript, heroOnly: false, source: "video"
+                )
+                valuation = FunnelValuation(from: result.draft)
+            } catch {
+                errorMessage = String(describing: error)
+                valuation = .mock
+            }
+            if let url {  // raw-clip retention (CAPTURE-CONTRACT §4) — async, never blocks
+                Task { [appState] in _ = try? await appState.videoUploadRepository.upload(fileURL: url) }
+            }
+        } else {
+            try? await Task.sleep(for: .seconds(0.6))   // stubbed valuation (useMocks)
+            valuation = .mock
+        }
+        screen = .result
     }
 
     func reset() {
@@ -130,5 +178,26 @@ struct FunnelGoldButton: View {
                 .padding(.vertical, 16)
                 .background(AppColor.gold, in: RoundedRectangle(cornerRadius: 14))
         }
+    }
+}
+
+extension FunnelValuation {
+    /// Maps a backend `ProductDraft` → funnel valuation. `rarity`, `insights`, and a
+    /// single `suggestedPrice` aren't in `ProductDraft` yet (CAPTURE-CONTRACT.md §5.1) —
+    /// placeholders until the backend adds them.
+    init(from draft: ProductDraft) {
+        let low = draft.suggestedPriceLow.map { NSDecimalNumber(decimal: $0).intValue } ?? 0
+        let high = draft.suggestedPriceHigh.map { NSDecimalNumber(decimal: $0).intValue } ?? low
+        self.init(
+            title: draft.title,
+            valueLow: low,
+            valueHigh: high,
+            suggested: high > 0 ? (low + high) / 2 : low,
+            category: draft.category?.displayName ?? "—",
+            condition: draft.condition?.displayName ?? "—",
+            rarity: 0,
+            confidence: Int(((draft.confidence ?? 0) * 100).rounded()),
+            insights: draft.tags ?? []
+        )
     }
 }

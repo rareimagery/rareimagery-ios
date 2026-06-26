@@ -64,6 +64,8 @@ struct FunnelRecordView: View {
 
     private var viewfinder: some View {
         ZStack {
+            CameraPreview(session: vm.capture.session)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             CornerBrackets(color: (isRecording ? rec : AppColor.gold).opacity(0.8))
             if isRecording {
                 VStack {
@@ -83,15 +85,6 @@ struct FunnelRecordView: View {
                     Waveform().padding(.bottom, 16)
                 }
                 .animation(.easeInOut, value: vm.currentPrompt)
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "viewfinder")
-                        .font(.system(size: 38, weight: .light))
-                        .foregroundStyle(.white.opacity(0.32))
-                    Text("YOUR PRODUCT, LIVE")
-                        .font(AppFont.mono(11)).tracking(1)
-                        .foregroundStyle(.white.opacity(0.32))
-                }
             }
         }
     }
