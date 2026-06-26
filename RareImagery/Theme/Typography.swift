@@ -14,10 +14,10 @@ enum AppFont {
     private static let bodyFamily = "HankenGrotesk"
     private static let monoFamily = "JetBrainsMono"
 
-    private static func display(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
+    static func display(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
         .custom(displayFamily, size: size).weight(weight)
     }
-    private static func bodyText(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+    static func bodyText(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
         .custom(bodyFamily, size: size).weight(weight)
     }
     /// Mono — eyebrows, prices, catalog labels (new in the refresh).
