@@ -1,12 +1,36 @@
 import SwiftUI
 
+/// RareImagery type system — app-wide refresh (2026-06-25).
+/// Display = Space Grotesk · Body = Hanken Grotesk · Mono = JetBrains Mono.
+///
+/// `Font.custom(family, size:)` falls back to the system font when the family
+/// isn't registered, so this is safe to ship before the TTFs are bundled
+/// (Phase 1b: add the OFL TTFs + `UIAppFonts`). Once bundled, `.weight(_)`
+/// selects the matching face. Existing `AppFont.*` names are preserved so all
+/// call-sites keep working.
 enum AppFont {
-    static let largeTitle = Font.system(size: 34, weight: .bold, design: .default)
-    static let title = Font.system(size: 28, weight: .bold, design: .default)
-    static let headline = Font.system(size: 20, weight: .semibold)
-    static let subheadline = Font.system(size: 15, weight: .regular)
-    static let body = Font.system(size: 17, weight: .regular)
-    static let callout = Font.system(size: 16, weight: .regular)
-    static let caption = Font.system(size: 13, weight: .regular)
-    static let buttonLabel = Font.system(size: 17, weight: .semibold)
+    // Families (registered names). System fallback until TTFs are added.
+    private static let displayFamily = "SpaceGrotesk"
+    private static let bodyFamily = "HankenGrotesk"
+    private static let monoFamily = "JetBrainsMono"
+
+    private static func display(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
+        .custom(displayFamily, size: size).weight(weight)
+    }
+    private static func bodyText(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+        .custom(bodyFamily, size: size).weight(weight)
+    }
+    /// Mono — eyebrows, prices, catalog labels (new in the refresh).
+    static func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+        .custom(monoFamily, size: size).weight(weight)
+    }
+
+    static let largeTitle = display(34, .bold)
+    static let title = display(28, .bold)
+    static let headline = display(20, .semibold)
+    static let subheadline = bodyText(15)
+    static let body = bodyText(17)
+    static let callout = bodyText(16)
+    static let caption = bodyText(13)
+    static let buttonLabel = display(17, .semibold)
 }
