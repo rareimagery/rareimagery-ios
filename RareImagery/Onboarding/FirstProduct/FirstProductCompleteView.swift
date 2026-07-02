@@ -3,8 +3,8 @@ import RareImageryAPI
 
 /// Screen 3 of the first-product wizard. Confirms the draft was
 /// created, offers an X share (native iOS share sheet, NOT a custom
-/// X API call), and a "Continue to Rare" CTA that drops the user
-/// into the main app.
+/// X API call), and a "Continue to your store" CTA that routes to
+/// the store editor (Act 4 — arrange + launch).
 ///
 /// Naming note: this is **`FirstProductCompleteView`**, distinct from
 /// PR #1's `OnboardingCompleteView` (which closes out the sign-in +
@@ -18,12 +18,6 @@ import RareImageryAPI
 struct FirstProductCompleteView: View {
     @Environment(AppState.self) private var state
     @Bindable var viewModel: FirstProductViewModel
-
-    /// Closure injected by `FirstProductFlowView`. Flips
-    /// `state.session.hasSeenLivePreview = true` AND dismisses the
-    /// fullScreenCover — both happen together so ContentView's next
-    /// render lands on the main app.
-    let onFinish: () -> Void
 
     @State private var iconScale: CGFloat = 0.7
     @State private var iconOpacity: Double = 0
@@ -201,8 +195,11 @@ struct FirstProductCompleteView: View {
     }
 
     private var continueButton: some View {
-        Button(action: onFinish) {
-            Text("Continue to Rare")
+        // Routes to the store editor (Act 4 — arrange + launch), not
+        // straight to the main app. `onFinish` now fires from the
+        // launched screen instead.
+        Button(action: { viewModel.advanceToStoreEditor() }) {
+            Text("Continue to your store")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.black)
                 .frame(maxWidth: .infinity)
@@ -267,8 +264,7 @@ struct FirstProductCompleteView: View {
                 tags: ["denim", "vintage", "jacket"]
             )
             return vm
-        }(),
-        onFinish: {}
+        }()
     )
     .environment(AppState())
     .preferredColorScheme(.dark)

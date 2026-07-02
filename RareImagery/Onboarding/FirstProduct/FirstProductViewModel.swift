@@ -34,6 +34,7 @@ final class FirstProductViewModel {
         case setup
         case capturing
         case complete
+        case storeEditor
     }
 
     // MARK: - Wizard state
@@ -123,6 +124,13 @@ final class FirstProductViewModel {
     func advanceToComplete() {
         guard createdDraft != nil else { return }
         phase = .complete
+    }
+
+    /// Act 4 of the app flow — "Continue to your store" on the complete
+    /// screen routes into the store editor (arrange + launch).
+    func advanceToStoreEditor() {
+        guard phase == .complete else { return }
+        phase = .storeEditor
     }
 
     /// Lets the user re-capture without losing their setup selections.

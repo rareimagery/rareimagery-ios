@@ -38,8 +38,10 @@ struct FirstProductFlowView: View {
                     case .capturing:
                         FirstProductCaptureView(viewModel: viewModel)
                     case .complete:
-                        FirstProductCompleteView(
-                            viewModel: viewModel,
+                        FirstProductCompleteView(viewModel: viewModel)
+                    case .storeEditor:
+                        StoreEditorView(
+                            products: [viewModel.createdDraft].compactMap { $0 },
                             onFinish: finishWizard
                         )
                     }
@@ -80,9 +82,10 @@ struct FirstProductFlowView: View {
     /// where they are in the 3-step flow.
     private var navigationTitle: String {
         switch viewModel.phase {
-        case .setup:     return "1 of 3"
-        case .capturing: return "2 of 3"
-        case .complete:  return "3 of 3"
+        case .setup:       return "1 of 3"
+        case .capturing:   return "2 of 3"
+        case .complete:    return "3 of 3"
+        case .storeEditor: return "Launch your store"
         }
     }
 
@@ -101,9 +104,9 @@ struct FirstProductFlowView: View {
 
     private var currentStepIndex: Int {
         switch viewModel.phase {
-        case .setup:     return 0
-        case .capturing: return 1
-        case .complete:  return 2
+        case .setup:       return 0
+        case .capturing:   return 1
+        case .complete, .storeEditor: return 2
         }
     }
 
