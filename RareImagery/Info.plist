@@ -47,6 +47,8 @@
 	<string>RareImagery saves processed product photos back to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>RareImagery uses photos you pick from your library to create product listings.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>RareImagery transcribes your spoken product details on-device so Grok can value your item. Your audio stays on your phone.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

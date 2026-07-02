@@ -4,6 +4,7 @@ import SwiftUI
 /// 3 steps" + gold "Start your video" CTA.
 struct FunnelInstructionsView: View {
     let vm: FunnelViewModel
+    var onExit: (() -> Void)? = nil
     @State private var floaty = false
 
     private let steps: [(icon: String, title: String, gold: Bool)] = [
@@ -52,6 +53,17 @@ struct FunnelInstructionsView: View {
                 Spacer(minLength: 16)
 
                 FunnelGoldButton(title: "Start your video") { vm.openCamera() }
+
+                if let onExit {
+                    Button(action: onExit) {
+                        Text("Skip for now")
+                            .font(AppFont.bodyText(14))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .padding(.top, 4)
+                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)

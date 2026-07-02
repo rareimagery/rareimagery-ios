@@ -35,6 +35,12 @@ final class AuthSession {
     /// the welcome screen.
     var hasSeenLivePreview: Bool = false
 
+    /// Flag for the value-first video funnel. Anonymous users see
+    /// `VideoSubmissionFunnelView` on first launch until they skip or finish
+    /// claiming. Reset on sign-out / fresh sign-in like `hasSeenLivePreview`.
+    /// Not set in `setAnonymous` — trial users should see the funnel.
+    var hasSeenFunnel: Bool = false
+
     var isSignedIn: Bool {
         if case .signedIn = status { return true }
         return false
@@ -76,6 +82,9 @@ final class AuthSession {
         isAnonymous && freeUsesRemaining <= 0
     }
 
+    /// True when the anonymous trial budget is exhausted — skip funnel, use shell gating.
+    var trialExhausted: Bool { shouldShowSignUpReminder }
+
     /// Prefer the response's creator block when available; falls back to JWT claims.
     var displayHandle: String? {
         creator?.handle ?? claims?.handle
@@ -95,6 +104,7 @@ final class AuthSession {
             // even if this is a returning user who previously dismissed it
             // on another device. Local-only flag — no server round-trip.
             self.hasSeenLivePreview = false
+            self.hasSeenFunnel = false
             // Trial counter no longer applies to a signed-in session.
             // Phase 3: the anonymous JWT in `.accessToken` was just
             // overwritten by the production one; clear the counter so
@@ -132,6 +142,7 @@ final class AuthSession {
         self.creator = nil
         self.lastError = error
         self.hasSeenLivePreview = false
+        self.hasSeenFunnel = false
         self.freeUsesRemaining = AuthSession.anonymousFreeUsesCap
     }
 

@@ -20,7 +20,9 @@ public struct AnonymousAuthRequest: Encodable, Sendable {
 /// The token is a short-lived (24h per BFF spec) JWT with audience
 /// `mobile-anonymous` — it CANNOT pass the standard `requireSessionOrMobile`
 /// gate, only the broader `requireAnyAuthOrAnonymous` used by routes that
-/// opted in (currently just `/api/v1/vision/merch-ideas`).
+/// opted in: `/api/v1/vision/merch-ideas`, `/api/products/from-images`, and
+/// `/api/v1/vision/analyze` (the latter pending BFF deploy of the
+/// anonymous-analyze + draft_token change).
 public struct AnonymousAuthResponse: Decodable, Sendable, Equatable {
     public let accessToken: String
     public let expiresIn: Int    // seconds from issuance

@@ -32,6 +32,11 @@ final class CaptureSession {
     var intent: ProductIntent = .unknown
     var phase: Phase = .idle
 
+    // Multi-photo curation: select up to 2 favorites for Grok Vision analysis
+    // and as official product pictures. Only these are sent to analyze.
+    // Matches web PhotoCurationGrid + spec "select 1-2 favorites, trash the rest".
+    var selectedFavoriteIds: Set<UUID> = []
+
     var hero: Shot? {
         shots.indices.contains(heroIndex) ? shots[heroIndex] : nil
     }
@@ -39,18 +44,21 @@ final class CaptureSession {
     var canAddMore: Bool { shots.count < Self.maxShots }
 
     var canAnalyze: Bool {
-        guard !shots.isEmpty else { return false }
-        if case .working = phase { return false }
-        return true
+        !selectedFavoriteIds.isEmpty && selectedFavoriteIds.count <= 2 && phase != .working
     }
 
     func addShot(jpegData: Data) {
         guard canAddMore else { return }
-        shots.append(Shot(jpegData: jpegData))
+        let shot = Shot(jpegData: jpegData)
+        shots.append(shot)
+        if selectedFavoriteIds.count < 2 {
+            selectedFavoriteIds.insert(shot.id)
+        }
     }
 
     func removeShot(id: UUID) {
         shots.removeAll { $0.id == id }
+        selectedFavoriteIds.remove(id)
         if heroIndex >= shots.count { heroIndex = max(0, shots.count - 1) }
     }
 
@@ -59,11 +67,30 @@ final class CaptureSession {
         heroIndex = index
     }
 
+    func toggleFavorite(id: UUID) {
+        if selectedFavoriteIds.contains(id) {
+            selectedFavoriteIds.remove(id)
+        } else if selectedFavoriteIds.count < 2 {
+            selectedFavoriteIds.insert(id)
+        }
+    }
+
+    func trashUnselected() {
+        shots.removeAll { !selectedFavoriteIds.contains($0.id) }
+        selectedFavoriteIds = selectedFavoriteIds.filter { id in
+            shots.contains { $0.id == id }
+        }
+        if !shots.indices.contains(heroIndex) {
+            heroIndex = max(0, shots.count - 1)
+        }
+    }
+
     func reset() {
         shots = []
         heroIndex = 0
         voiceTranscript = ""
         intent = .unknown
         phase = .idle
+        selectedFavoriteIds = []
     }
 }

@@ -27,10 +27,18 @@ struct OnePageCreatorView: View {
     /// for backwards compat (debug menus / pre-burst-capture entry points).
     let vibePhotoURL: URL?
     let productPhotoURLs: [URL]
+    /// Invoked when the user taps "View my store" after a successful publish.
+    /// Entry-point hosts use this to dismiss and flip onboarding flags.
+    let onFinished: (() -> Void)?
 
-    init(vibePhotoURL: URL? = nil, productPhotoURLs: [URL] = []) {
+    init(
+        vibePhotoURL: URL? = nil,
+        productPhotoURLs: [URL] = [],
+        onFinished: (() -> Void)? = nil
+    ) {
         self.vibePhotoURL = vibePhotoURL
         self.productPhotoURLs = productPhotoURLs
+        self.onFinished = onFinished
     }
 
     var body: some View {
@@ -138,6 +146,10 @@ struct OnePageCreatorView: View {
                 CreateAndLaunchButton(
                     state: buttonState(for: viewModel),
                     action: {
+                        if case .published = viewModel.phase {
+                            onFinished?()
+                            return
+                        }
                         // Same gating for the bottom CTA — Create+Launch
                         // also requires X auth (provision-store + publish).
                         if state.session.isAnonymous {
@@ -330,5 +342,60 @@ struct OnePageCreatorView: View {
             confidence: nil,
             flags: (idea.flags ?? []).isEmpty ? nil : idea.flags
         )
+    }
+}
+
+/// Presents `OnePageCreatorView` inside a `NavigationStack` with a close
+/// button — used by fullScreenCover entry points (Live Preview, Home tab).
+struct OnePageCreatorHostView: View {
+    @Environment(AppState.self) private var state
+    @Environment(\.dismiss) private var dismiss
+
+    let vibePhotoURL: URL?
+    let productPhotoURLs: [URL]
+    /// When true, a successful publish + "View my store" also flips
+    /// `hasSeenLivePreview` so `ContentView` routes to the main app.
+    var markLivePreviewComplete: Bool = false
+
+    init(
+        vibePhotoURL: URL? = nil,
+        productPhotoURLs: [URL] = [],
+        markLivePreviewComplete: Bool = false
+    ) {
+        self.vibePhotoURL = vibePhotoURL
+        self.productPhotoURLs = productPhotoURLs
+        self.markLivePreviewComplete = markLivePreviewComplete
+    }
+
+    var body: some View {
+        NavigationStack {
+            OnePageCreatorView(
+                vibePhotoURL: vibePhotoURL,
+                productPhotoURLs: productPhotoURLs,
+                onFinished: finishAfterPublish
+            )
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(AppColor.textSecondary)
+                    }
+                    .accessibilityLabel("Close")
+                }
+            }
+        }
+        .environment(state)
+        .tint(AppColor.accent)
+        .preferredColorScheme(.dark)
+    }
+
+    private func finishAfterPublish() {
+        if markLivePreviewComplete {
+            state.session.hasSeenLivePreview = true
+        }
+        dismiss()
     }
 }

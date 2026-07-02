@@ -4,6 +4,7 @@ import SwiftUI
 /// the **account wall**: "Create your store to sell" gates X-OAuth.
 struct FunnelResultView: View {
     let vm: FunnelViewModel
+    var onExit: (() -> Void)? = nil
     @Environment(AppState.self) private var state
     @State private var coordinator = AuthCoordinator()
     @State private var authing = false
@@ -46,7 +47,7 @@ struct FunnelResultView: View {
                     .padding(.top, 16)
 
                     VStack(spacing: 10) {
-                        FunnelGoldButton(title: authing ? "Connecting to X…" : "Create your store to sell") {
+                        FunnelGoldButton(title: authing ? "Connecting to X…" : (state.session.isAnonymous ? "Claim this draft" : "Create your store to sell")) {
                             createStore()
                         }
                         .disabled(authing)
@@ -56,6 +57,15 @@ struct FunnelResultView: View {
                             Text("Record again")
                                 .font(AppFont.bodyText(14)).foregroundStyle(.white.opacity(0.7))
                                 .frame(maxWidth: .infinity).padding(.vertical, 10)
+                        }
+                        if let onExit {
+                            Button(action: onExit) {
+                                Text("Explore the app")
+                                    .font(AppFont.bodyText(14))
+                                    .foregroundStyle(.white.opacity(0.7))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                            }
                         }
                     }
                     .padding(.top, 20)
@@ -109,7 +119,8 @@ struct FunnelResultView: View {
         } else {
             Task {
                 authing = true
-                await coordinator.signInWithX(state: state)
+                let draftToken = state.session.isAnonymous ? (try? await state.keychain.get(.pendingDraftToken)) : nil
+                await coordinator.signInWithX(state: state, draftToken: draftToken)
                 authing = false
             }
         }

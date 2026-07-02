@@ -7,19 +7,29 @@ public actor AuthRepository {
         self.client = client
     }
 
-    /// Per CLAUDE.md §2.2 the BFF expects camelCase keys here, not snake_case.
+    /// Per CLAUDE.md §2.2 the BFF expects camelCase keys here — EXCEPT the
+    /// draft-claim field, which the callback route reads as `draft_token`
+    /// (x/callback/route.ts parses `body.draft_token`). Mixed casing is the
+    /// server's contract, not a client bug.
     private struct CallbackBody: Encodable {
         let code: String
         let codeVerifier: String
         let redirectUri: String
         let state: String?
+        let draftToken: String?
+
+        enum CodingKeys: String, CodingKey {
+            case code, codeVerifier, redirectUri, state
+            case draftToken = "draft_token"
+        }
     }
 
     public func completeOAuth(
         code: String,
         codeVerifier: String,
         redirectURI: String,
-        state: String? = nil
+        state: String? = nil,
+        draftToken: String? = nil
     ) async throws -> AuthTokenResponse {
         // Build the request manually so JSONEncoder doesn't apply
         // the client's default snake_case key strategy.
@@ -30,7 +40,8 @@ public actor AuthRepository {
                 code: code,
                 codeVerifier: codeVerifier,
                 redirectUri: redirectURI,
-                state: state
+                state: state,
+                draftToken: draftToken
             )
         )
         let endpoint = APIEndpoint(

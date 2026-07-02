@@ -56,7 +56,8 @@ public actor AuthService {
 
     /// Process the callback URL returned by ASWebAuthenticationSession.
     /// Extracts the code, validates state, and exchanges via AuthRepository.
-    public func completeXAuth(callbackURL: URL) async throws -> AuthTokenResponse {
+    /// If `draftToken` is non-nil it is forwarded to the x/callback for claim handoff.
+    public func completeXAuth(callbackURL: URL, draftToken: String? = nil) async throws -> AuthTokenResponse {
         guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false) else {
             throw APIError.authFailed("Malformed callback URL")
         }
@@ -83,7 +84,8 @@ public actor AuthService {
         let tokens = try await repository.completeOAuth(
             code: code,
             codeVerifier: verifier,
-            redirectURI: configuration.redirectURI
+            redirectURI: configuration.redirectURI,
+            draftToken: draftToken
         )
         try await client.persist(tokens)
         logger.info("X OAuth complete — token persisted")

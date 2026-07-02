@@ -14,11 +14,10 @@ import RareImageryAPI
 /// Voice: Rare the mascot does the welcoming. Warm, brief, direct.
 ///
 /// Routing:
-///   - "Create your first product" → presents `FirstProductFlowView` as
-///     a `.fullScreenCover` INTERNAL to this view. On finish that flow
-///     flips `hasSeenLivePreview = true` itself and dismisses; on
-///     cancel it just dismisses (user returns here to pick another
-///     action).
+///   - "Create your first product" → presents `OnePageCreatorHostView`
+///     as a `.fullScreenCover` INTERNAL to this view. On publish +
+///     "View my store" the host flips `hasSeenLivePreview = true` and
+///     dismisses; on cancel (toolbar X) the user returns here.
 ///   - "Tweak my store first" → `TweakSheetView` (sheet — optional
 ///     refinement; flipping `hasSeenLivePreview` is the user's call
 ///     via the explicit Save/Continue inside the sheet).
@@ -29,11 +28,11 @@ struct LivePreviewView: View {
     @Environment(AppState.self) private var state
 
     /// Navigation outcomes the parent needs to know about. The primary
-    /// "Create your first product" CTA is now handled internally via
+    /// "Create your first product" CTA is handled internally via
     /// `.fullScreenCover` — the parent doesn't need a case for it
-    /// because `FirstProductFlowView` owns its own finish + dismiss
-    /// behavior. Kept as an enum (vs. closures-per-action) so the
-    /// remaining parent-driven actions stay self-documenting.
+    /// because `OnePageCreatorHostView` owns finish + dismiss. Kept as
+    /// an enum (vs. closures-per-action) so the remaining parent-driven
+    /// actions stay self-documenting.
     enum Action {
         case tweakStore
         case justExplore
@@ -45,10 +44,8 @@ struct LivePreviewView: View {
 
     @State private var showTweakSheet = false
 
-    /// Drives the primary CTA's `.fullScreenCover` presenting the new
-    /// 3-screen first-product wizard. Internal to this view — the
-    /// parent doesn't need to know.
-    @State private var showFirstProductFlow = false
+    /// Drives the primary CTA's `.fullScreenCover` presenting OnePageCreator.
+    @State private var showOnePageCreator = false
 
     var body: some View {
         ZStack {
@@ -83,8 +80,9 @@ struct LivePreviewView: View {
         .sheet(isPresented: $showTweakSheet) {
             TweakSheetView()
         }
-        .fullScreenCover(isPresented: $showFirstProductFlow) {
-            FirstProductFlowView()
+        .fullScreenCover(isPresented: $showOnePageCreator) {
+            OnePageCreatorHostView(markLivePreviewComplete: true)
+                .environment(state)
         }
     }
 
@@ -113,13 +111,7 @@ struct LivePreviewView: View {
     private var actionStack: some View {
         VStack(spacing: 12) {
             Button {
-                // Primary CTA opens the 3-screen FirstProduct wizard
-                // INTERNALLY via fullScreenCover. The wizard owns its
-                // own finish + dismiss (it flips hasSeenLivePreview
-                // itself on Screen 3's "Continue to Rare"). On user
-                // cancel, the cover dismisses and we stay on this
-                // welcome screen so they can pick another path.
-                showFirstProductFlow = true
+                showOnePageCreator = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "camera.fill")

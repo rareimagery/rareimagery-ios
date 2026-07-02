@@ -9,16 +9,17 @@ import RareImageryAPI
 /// Phase 3 swaps real AVFoundation capture; Phase 5 swaps the real
 /// `from-video` valuation. The account wall sits on the Result CTA.
 struct VideoSubmissionFunnelView: View {
+    var onExit: (() -> Void)? = nil
     @State private var vm = FunnelViewModel()
     @Environment(AppState.self) private var state
 
     var body: some View {
         ZStack {
             switch vm.screen {
-            case .instructions: FunnelInstructionsView(vm: vm)
+            case .instructions: FunnelInstructionsView(vm: vm, onExit: onExit)
             case .record, .recording: FunnelRecordView(vm: vm)
             case .processing: FunnelProcessingView(vm: vm)
-            case .result: FunnelResultView(vm: vm)
+            case .result: FunnelResultView(vm: vm, onExit: onExit)
             }
         }
         .preferredColorScheme(.dark)
@@ -128,9 +129,13 @@ final class FunnelViewModel {
             do {
                 let result = try await appState.productRepository.analyze(
                     dataURLs: frames, intent: .resell,
-                    voiceTranscript: transcript, heroOnly: false, source: "video"
+                    voiceTranscript: transcript, heroOnly: false,
+                    mode: .valuation, source: "video"
                 )
-                valuation = FunnelValuation(from: result.draft)
+                if let token = result.draftToken {
+                    try? await appState.keychain.set(token, for: .pendingDraftToken)
+                }
+                valuation = FunnelValuation(from: result)
             } catch {
                 errorMessage = String(describing: error)
                 valuation = .mock
@@ -182,22 +187,37 @@ struct FunnelGoldButton: View {
 }
 
 extension FunnelValuation {
-    /// Maps a backend `ProductDraft` → funnel valuation. `rarity`, `insights`, and a
-    /// single `suggestedPrice` aren't in `ProductDraft` yet (CAPTURE-CONTRACT.md §5.1) —
-    /// placeholders until the backend adds them.
-    init(from draft: ProductDraft) {
-        let low = draft.suggestedPriceLow.map { NSDecimalNumber(decimal: $0).intValue } ?? 0
-        let high = draft.suggestedPriceHigh.map { NSDecimalNumber(decimal: $0).intValue } ?? low
+    /// Maps a backend `VisionResult` → funnel valuation. Prefers top-level
+    /// `estimatedValue`, `insights`, and `rarity` when the BFF sends them.
+    init(from result: VisionResult) {
+        let draft = result.draft
+        let ev = result.estimatedValue ?? draft.estimatedValue
+        let bandLow = ev?.low ?? draft.suggestedPriceLow ?? result.suggestedPrice?.low
+        let bandHigh = ev?.high ?? draft.suggestedPriceHigh ?? result.suggestedPrice?.high
+        let low = bandLow.map { NSDecimalNumber(decimal: $0).intValue } ?? 0
+        let high = bandHigh.map { NSDecimalNumber(decimal: $0).intValue } ?? low
+        var insights = result.insights ?? draft.tags ?? []
+        if insights.isEmpty, let reasoning = ev?.reasoning, !reasoning.isEmpty {
+            insights = [reasoning]
+        } else if let reasoning = ev?.reasoning, !reasoning.isEmpty, !insights.contains(reasoning) {
+            insights.insert(reasoning, at: 0)
+        }
+        let confidencePct = result.confidence ?? draft.confidence ?? 0
         self.init(
             title: draft.title,
             valueLow: low,
             valueHigh: high,
             suggested: high > 0 ? (low + high) / 2 : low,
-            category: draft.category?.displayName ?? "—",
+            category: draft.category?.displayName ?? draft.summary ?? "—",
             condition: draft.condition?.displayName ?? "—",
-            rarity: 0,
-            confidence: Int(((draft.confidence ?? 0) * 100).rounded()),
-            insights: draft.tags ?? []
+            rarity: result.rarity ?? 0,
+            confidence: Int((confidencePct * 100).rounded()),
+            insights: insights
         )
+    }
+
+    /// Legacy mapper when only a `ProductDraft` is available.
+    init(from draft: ProductDraft) {
+        self.init(from: VisionResult(ok: true, draft: draft))
     }
 }

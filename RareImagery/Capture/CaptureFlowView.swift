@@ -141,14 +141,15 @@ private struct DraftPreview: View {
             } else {
                 Task {
                     isAuthenticating = true
-                    await coordinator.signInWithX(state: state)
+                    let draftToken = state.session.isAnonymous ? (try? await state.keychain.get(.pendingDraftToken)) : nil
+                    await coordinator.signInWithX(state: state, draftToken: draftToken)
                     isAuthenticating = false
                 }
             }
         } label: {
             HStack(spacing: 8) {
                 if isAuthenticating { ProgressView().tint(.black) }
-                Text(isAuthenticating ? "Connecting to X…" : "Create your store to sell")
+                Text(isAuthenticating ? "Connecting to X…" : (state.session.isAnonymous ? "Claim this draft" : "Create your store to sell"))
                     .font(AppFont.buttonLabel)
             }
             .foregroundStyle(.black)
@@ -220,8 +221,12 @@ enum CaptureCoordinator {
                 dataURLs: dataURLs,
                 intent: capture.intent,
                 voiceTranscript: capture.voiceTranscript.isEmpty ? nil : capture.voiceTranscript,
-                heroOnly: false
+                heroOnly: false,
+                mode: .product
             )
+            if let token = result.draftToken {
+                try? await state.keychain.set(token, for: .pendingDraftToken)
+            }
             capture.phase = .ready(result.draft)
         } catch {
             capture.phase = .error(message(error))
