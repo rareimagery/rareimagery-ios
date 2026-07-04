@@ -16,6 +16,12 @@ struct CaptureView: View {
             } else {
                 FilmstripView()
 
+                // Multi-photo curation grid (Phase 1 for full Create First Drop / Rare Drop)
+                // Matches web PhotoCurationGrid + spec: select 1-2 favorites (for Grok Vision + product pics),
+                // trash the rest, only selected sent to analyze.
+                // High fidelity: dark palette, orange accents, star badges, trash.
+                curationGrid
+
                 intentPicker
 
                 Spacer(minLength: 0)
@@ -98,6 +104,136 @@ struct CaptureView: View {
             }
         }
     }
+
+    private var curationGrid: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Select 1-2 favorites")
+                    .font(AppFont.callout)
+                    .foregroundStyle(AppColor.textSecondary)
+                Spacer()
+                Text("\(capture.selectedFavoriteIds.count)/2")
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.textSecondary)
+            }
+            .padding(.horizontal, 16)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(capture.shots) { shot in
+                        let isFavorite = capture.selectedFavoriteIds.contains(shot.id)
+                        ShotCurationThumbnail(
+                            shot: shot,
+                            isFavorite: isFavorite,
+                            isHero: capture.hero?.id == shot.id
+                        )
+                        .onTapGesture {
+                            capture.toggleFavorite(id: shot.id)
+                        }
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                capture.removeShot(id: shot.id)
+                                capture.selectedFavoriteIds.remove(shot.id)
+                            } label: {
+                                Label("Trash", systemImage: "trash")
+                            }
+                            if isFavorite {
+                                Button("Unfavorite") {
+                                    capture.toggleFavorite(id: shot.id)
+                                }
+                            } else if capture.selectedFavoriteIds.count < 2 {
+                                Button("Favorite") {
+                                    capture.toggleFavorite(id: shot.id)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+
+            HStack {
+                Button {
+                    capture.trashUnselected()
+                } label: {
+                    Text("Trash unselected")
+                        .font(AppFont.callout)
+                }
+                .disabled(capture.selectedFavoriteIds.count == capture.shots.count)
+                .foregroundStyle(AppColor.textSecondary)
+
+                Spacer()
+
+                Button {
+                    Task { await CaptureCoordinator.run(state: state) }
+                } label: {
+                    Text("Analyze \(capture.selectedFavoriteIds.count) selected")
+                        .font(AppFont.buttonLabel)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(AppColor.cta)
+                .disabled(capture.selectedFavoriteIds.isEmpty || capture.selectedFavoriteIds.count > 2)
+            }
+            .padding(.horizontal, 16)
+
+            Text("Only your chosen favorites are sent to Grok Vision and saved as product pictures.")
+                .font(AppFont.caption)
+                .foregroundStyle(AppColor.textSecondary)
+                .padding(.horizontal, 16)
+        }
+    }
+
+    // NOTE: pre-existing structural fix — a stray `}` here was closing CaptureView
+    // early, orphaning analyzeButton/ingest and making the final brace extraneous.
+    // Removed it so those stay members of CaptureView; ShotCurationThumbnail nests.
+    private struct ShotCurationThumbnail: View {
+    let shot: CaptureSession.Shot
+    let isFavorite: Bool
+    let isHero: Bool
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            if let uiImage = UIImage(data: shot.jpegData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 80, height: 80)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isFavorite ? AppColor.accent : AppColor.border, lineWidth: isFavorite ? 3 : 1)
+                    )
+            } else {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(AppColor.surface)
+                    .frame(width: 80, height: 80)
+            }
+
+            if isFavorite {
+                Text("FAV")
+                    .font(.system(size: 9, weight: .heavy))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(AppColor.accent)
+                    .foregroundStyle(.white)
+                    .clipShape(Capsule())
+                    .padding(4)
+            }
+
+            if isHero {
+                Text("HERO")
+                    .font(.system(size: 9, weight: .heavy))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(AppColor.cta)
+                    .foregroundStyle(.black)
+                    .clipShape(Capsule())
+                    .padding(4)
+                    .offset(x: 0, y: 22)
+            }
+        }
+    }
+}
 
     private var analyzeButton: some View {
         Button {

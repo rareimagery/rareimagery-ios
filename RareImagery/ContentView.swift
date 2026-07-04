@@ -12,9 +12,8 @@ import RareImageryAPI
 ///      the live-preview screen yet) → LivePreviewView (the "You're live"
 ///      screen — the new onboarding pattern per the 2026-05-23 redesign).
 ///
-///   3. RETURNING user (or anyone who's tapped "Create first product" /
-///      "Just explore" on the LivePreviewView) → CaptureFlowView (the main
-///      app entry).
+///   3. RETURNING user (or anyone who's finished OnePageCreator /
+///      tapped "Just explore" on LivePreviewView) → MainTabView.
 ///
 /// The transition from state #2 → #3 is local-only: a flag on AuthSession
 /// flips once the user dismisses the LivePreviewView. No round-trip to
@@ -50,17 +49,14 @@ struct ContentView: View {
             }
 
         case .anonymous:
-            // Phase 3 — anonymous trial user. Lands directly in MainTabView
-            // (skipping SignInView and LivePreviewView) per the
-            // "make the first 3 fun and free" principle. OnePageCreator
-            // and any sibling tab that hits authed-only routes will
-            // surface SignUpReminderBanner / sign-up sheets in-place when
-            // the trial budget runs out. The dedicated burst-capture
-            // entry point that primes OnePageCreator with vibe + product
-            // photos is wired separately (user's PhotoSelection module);
-            // until that lands, anonymous users navigate the existing
-            // shell with per-screen gating active.
-            MainTabView()
+            // Value-first video funnel on first launch; skip lands in MainTabView.
+            // Trial-exhausted users go straight to the shell (per-screen gating).
+            // Burst-capture / OnePageCreator wiring remains separate (XTOOLS §6).
+            if !state.session.hasSeenFunnel, !state.session.trialExhausted {
+                VideoSubmissionFunnelView(onExit: { state.session.hasSeenFunnel = true })
+            } else {
+                MainTabView()
+            }
         }
     }
 
@@ -69,26 +65,8 @@ struct ContentView: View {
     }
 
     private func handleLivePreviewAction(_ action: LivePreviewView.Action) {
-        // Two parent-driven actions remain after the FirstProduct
-        // wizard moved internal to LivePreviewView (via fullScreenCover):
-        //
-        //   - .tweakStore  → fires after the user dismisses TweakSheetView
-        //                    (presented internally by LivePreviewView).
-        //                    Semantically equivalent to "Just explore" —
-        //                    they go to the main app.
-        //   - .justExplore → user explicitly skipped the wizard. Route
-        //                    to the main app.
-        //
-        // Both flip hasSeenLivePreview so we don't re-render the welcome
-        // screen on next render tick. CaptureFlowView is the default
-        // landing for both. If we later add a separate "browse / explore"
-        // view, .justExplore would route there instead.
-        //
-        // Note: the previous .createFirstProduct case is gone — the
-        // wizard's "Continue to Rare" CTA on Screen 3 flips
-        // hasSeenLivePreview directly via FirstProductFlowView's
-        // finishWizard() helper. We never round-trip back here for
-        // that path.
+        // Parent-driven actions from LivePreviewView. OnePageCreator's
+        // finish path flips hasSeenLivePreview inside OnePageCreatorHostView.
         state.session.hasSeenLivePreview = true
     }
 }

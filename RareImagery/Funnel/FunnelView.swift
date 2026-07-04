@@ -9,16 +9,17 @@ import RareImageryAPI
 /// Phase 3 swaps real AVFoundation capture; Phase 5 swaps the real
 /// `from-video` valuation. The account wall sits on the Result CTA.
 struct VideoSubmissionFunnelView: View {
+    var onExit: (() -> Void)? = nil
     @State private var vm = FunnelViewModel()
     @Environment(AppState.self) private var state
 
     var body: some View {
         ZStack {
             switch vm.screen {
-            case .instructions: FunnelInstructionsView(vm: vm)
+            case .instructions: FunnelInstructionsView(vm: vm, onExit: onExit)
             case .record, .recording: FunnelRecordView(vm: vm)
             case .processing: FunnelProcessingView(vm: vm)
-            case .result: FunnelResultView(vm: vm)
+            case .result: FunnelResultView(vm: vm, onExit: onExit)
             }
         }
         .preferredColorScheme(.dark)
@@ -28,33 +29,6 @@ struct VideoSubmissionFunnelView: View {
             await vm.prepareCamera()
         }
     }
-}
-
-/// Local valuation model for the funnel result/hook screen. Mirrors the design's
-/// fields (incl. rarity + insights, which the shared `ProductDraft` doesn't carry
-/// yet). Phase 5 maps the real `/api/products/from-video` response into this.
-struct FunnelValuation: Equatable {
-    var title: String
-    var valueLow: Int
-    var valueHigh: Int
-    var suggested: Int
-    var category: String
-    var condition: String
-    var rarity: Double      // 0–10
-    var confidence: Int     // 0–100
-    var insights: [String]
-
-    static let mock = FunnelValuation(
-        title: "Vintage Leather Moto Jacket",
-        valueLow: 120, valueHigh: 180, suggested: 149,
-        category: "Apparel · Outerwear", condition: "Good",
-        rarity: 7.4, confidence: 92,
-        insights: [
-            "Genuine leather, late-80s cut — desirable with collectors.",
-            "Minor wear at cuffs reads as patina, not damage.",
-            "Best sold as a limited drop — Edition № 001 / 001.",
-        ]
-    )
 }
 
 @MainActor @Observable
@@ -128,9 +102,13 @@ final class FunnelViewModel {
             do {
                 let result = try await appState.productRepository.analyze(
                     dataURLs: frames, intent: .resell,
-                    voiceTranscript: transcript, heroOnly: false, source: "video"
+                    voiceTranscript: transcript, heroOnly: false,
+                    mode: .valuation, source: "video"
                 )
-                valuation = FunnelValuation(from: result.draft)
+                if let token = result.draftToken {
+                    try? await appState.keychain.set(token, for: .pendingDraftToken)
+                }
+                valuation = FunnelValuation(from: result)
             } catch {
                 errorMessage = String(describing: error)
                 valuation = .mock
@@ -181,23 +159,4 @@ struct FunnelGoldButton: View {
     }
 }
 
-extension FunnelValuation {
-    /// Maps a backend `ProductDraft` → funnel valuation. `rarity`, `insights`, and a
-    /// single `suggestedPrice` aren't in `ProductDraft` yet (CAPTURE-CONTRACT.md §5.1) —
-    /// placeholders until the backend adds them.
-    init(from draft: ProductDraft) {
-        let low = draft.suggestedPriceLow.map { NSDecimalNumber(decimal: $0).intValue } ?? 0
-        let high = draft.suggestedPriceHigh.map { NSDecimalNumber(decimal: $0).intValue } ?? low
-        self.init(
-            title: draft.title,
-            valueLow: low,
-            valueHigh: high,
-            suggested: high > 0 ? (low + high) / 2 : low,
-            category: draft.category?.displayName ?? "—",
-            condition: draft.condition?.displayName ?? "—",
-            rarity: 0,
-            confidence: Int(((draft.confidence ?? 0) * 100).rounded()),
-            insights: draft.tags ?? []
-        )
-    }
-}
+

@@ -5,7 +5,9 @@ import SwiftUI
 /// The funnel's `FunnelViewModel` drives REC state/timer; this service owns the
 /// `AVCaptureSession` (exposed for the preview) and returns the recorded file URL.
 /// Phase 3 — verified by compile here; record/playback is a device test.
-final class VideoCaptureService: NSObject, AVCaptureFileOutputRecordingDelegate {
+/// @unchecked Sendable: all mutable state (`configured`, `stopContinuation`)
+/// is confined to `sessionQueue`; the delegate callback hops onto it too.
+final class VideoCaptureService: NSObject, AVCaptureFileOutputRecordingDelegate, @unchecked Sendable {
     let session = AVCaptureSession()
     private let movieOutput = AVCaptureMovieFileOutput()
     private let sessionQueue = DispatchQueue(label: "com.rareimagery.capture.session")
@@ -69,14 +71,17 @@ final class VideoCaptureService: NSObject, AVCaptureFileOutputRecordingDelegate 
         }
     }
 
-    // AVCaptureFileOutputRecordingDelegate
+    // AVCaptureFileOutputRecordingDelegate — arrives on AVFoundation's internal
+    // queue; hop to sessionQueue so stopContinuation stays queue-confined.
     func fileOutput(_ output: AVCaptureFileOutput,
                     didFinishRecordingTo outputFileURL: URL,
                     from connections: [AVCaptureConnection],
                     error: Error?) {
-        let cont = stopContinuation
-        stopContinuation = nil
-        cont?.resume(returning: error == nil ? outputFileURL : nil)
+        sessionQueue.async {
+            let cont = self.stopContinuation
+            self.stopContinuation = nil
+            cont?.resume(returning: error == nil ? outputFileURL : nil)
+        }
     }
 }
 

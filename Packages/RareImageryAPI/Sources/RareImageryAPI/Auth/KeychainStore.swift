@@ -23,6 +23,12 @@ public actor KeychainStore {
         // Cleared explicitly on X sign-in via `clearAnonymousState()`.
         case anonymousDeviceId = "ri.anonymous_device_id"
         case anonymousFreeUsesUsed = "ri.anonymous_free_uses_used"
+
+        // Phase 3.5 — value-first draft claim handoff.
+        // `pendingDraftToken` holds the draft-claim JWT returned by anonymous
+        // vision analysis. Persisted so it survives restart; passed through
+        // x/callback then cleared on successful claim.
+        case pendingDraftToken = "ri.pending_draft_token"
     }
 
     private let service: String

@@ -3,7 +3,7 @@ import RareImageryAPI
 
 struct HomeTabView: View {
     @Environment(AppState.self) private var state
-    @State private var showCapture = false
+    @State private var showOnePageCreator = false
 
     var body: some View {
         NavigationStack {
@@ -17,16 +17,16 @@ struct HomeTabView: View {
                         Text("RareVision")
                             .font(AppFont.largeTitle)
                             .foregroundStyle(AppColor.textPrimary)
-                        Text("Capture something worth selling.")
+                        Text("Turn your look into merch.")
                             .font(AppFont.callout)
                             .foregroundStyle(AppColor.textSecondary)
                     }
 
                     Button {
-                        showCapture = true
+                        showOnePageCreator = true
                     } label: {
                         VStack(spacing: 10) {
-                            Image(systemName: "camera.fill")
+                            Image(systemName: "sparkles")
                                 .font(.system(size: 36, weight: .semibold))
                             Text("Create")
                                 .font(.system(size: 22, weight: .bold))
@@ -37,7 +37,7 @@ struct HomeTabView: View {
                         .shadow(color: AppColor.cta.opacity(0.35), radius: 24, y: 8)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Create a product")
+                    .accessibilityLabel("Create merch")
 
                     Spacer()
                     Spacer()
@@ -45,13 +45,9 @@ struct HomeTabView: View {
             }
             .navigationTitle("Home")
             .navigationBarTitleDisplayMode(.inline)
-            .fullScreenCover(isPresented: $showCapture) {
-                NavigationStack {
-                    CaptureFlowView()
-                }
-                .environment(state)
-                .environment(state.capture)
-                .tint(AppColor.accent)
+            .fullScreenCover(isPresented: $showOnePageCreator) {
+                OnePageCreatorHostView()
+                    .environment(state)
             }
         }
     }
