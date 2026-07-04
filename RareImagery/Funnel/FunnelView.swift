@@ -31,33 +31,6 @@ struct VideoSubmissionFunnelView: View {
     }
 }
 
-/// Local valuation model for the funnel result/hook screen. Mirrors the design's
-/// fields (incl. rarity + insights, which the shared `ProductDraft` doesn't carry
-/// yet). Phase 5 maps the real `/api/products/from-video` response into this.
-struct FunnelValuation: Equatable {
-    var title: String
-    var valueLow: Int
-    var valueHigh: Int
-    var suggested: Int
-    var category: String
-    var condition: String
-    var rarity: Double      // 0–10
-    var confidence: Int     // 0–100
-    var insights: [String]
-
-    static let mock = FunnelValuation(
-        title: "Vintage Leather Moto Jacket",
-        valueLow: 120, valueHigh: 180, suggested: 149,
-        category: "Apparel · Outerwear", condition: "Good",
-        rarity: 7.4, confidence: 92,
-        insights: [
-            "Genuine leather, late-80s cut — desirable with collectors.",
-            "Minor wear at cuffs reads as patina, not damage.",
-            "Best sold as a limited drop — Edition № 001 / 001.",
-        ]
-    )
-}
-
 @MainActor @Observable
 final class FunnelViewModel {
     enum Screen: Equatable { case instructions, record, recording, processing, result }
@@ -186,38 +159,4 @@ struct FunnelGoldButton: View {
     }
 }
 
-extension FunnelValuation {
-    /// Maps a backend `VisionResult` → funnel valuation. Prefers top-level
-    /// `estimatedValue`, `insights`, and `rarity` when the BFF sends them.
-    init(from result: VisionResult) {
-        let draft = result.draft
-        let ev = result.estimatedValue ?? draft.estimatedValue
-        let bandLow = ev?.low ?? draft.suggestedPriceLow ?? result.suggestedPrice?.low
-        let bandHigh = ev?.high ?? draft.suggestedPriceHigh ?? result.suggestedPrice?.high
-        let low = bandLow.map { NSDecimalNumber(decimal: $0).intValue } ?? 0
-        let high = bandHigh.map { NSDecimalNumber(decimal: $0).intValue } ?? low
-        var insights = result.insights ?? draft.tags ?? []
-        if insights.isEmpty, let reasoning = ev?.reasoning, !reasoning.isEmpty {
-            insights = [reasoning]
-        } else if let reasoning = ev?.reasoning, !reasoning.isEmpty, !insights.contains(reasoning) {
-            insights.insert(reasoning, at: 0)
-        }
-        let confidencePct = result.confidence ?? draft.confidence ?? 0
-        self.init(
-            title: draft.title,
-            valueLow: low,
-            valueHigh: high,
-            suggested: high > 0 ? (low + high) / 2 : low,
-            category: draft.category?.displayName ?? draft.summary ?? "—",
-            condition: draft.condition?.displayName ?? "—",
-            rarity: result.rarity ?? 0,
-            confidence: Int((confidencePct * 100).rounded()),
-            insights: insights
-        )
-    }
 
-    /// Legacy mapper when only a `ProductDraft` is available.
-    init(from draft: ProductDraft) {
-        self.init(from: VisionResult(ok: true, draft: draft))
-    }
-}

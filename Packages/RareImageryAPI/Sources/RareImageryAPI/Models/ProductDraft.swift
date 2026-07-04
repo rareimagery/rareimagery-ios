@@ -110,6 +110,8 @@ public struct VisionResult: Codable, Sendable, Equatable {
     public let estimatedValue: ProductDraft.EstimatedValue?
     /// Top-level listing band — present in `product` mode.
     public let suggestedPrice: SuggestedPriceBand?
+    /// Single recommended list price (USD) when the BFF emits a point estimate.
+    public let suggestedListPrice: Decimal?
     /// Narrative bullets (valuation insights or product selling points).
     public let insights: [String]?
     /// 0–10 scarcity signal when the model emits it (valuation mode).
@@ -127,6 +129,7 @@ public struct VisionResult: Codable, Sendable, Equatable {
         confidence: Double? = nil,
         estimatedValue: ProductDraft.EstimatedValue? = nil,
         suggestedPrice: SuggestedPriceBand? = nil,
+        suggestedListPrice: Decimal? = nil,
         insights: [String]? = nil,
         rarity: Double? = nil,
         draftToken: String? = nil
@@ -138,6 +141,7 @@ public struct VisionResult: Codable, Sendable, Equatable {
         self.confidence = confidence
         self.estimatedValue = estimatedValue
         self.suggestedPrice = suggestedPrice
+        self.suggestedListPrice = suggestedListPrice
         self.insights = insights
         self.rarity = rarity
         self.draftToken = draftToken

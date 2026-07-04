@@ -75,14 +75,22 @@ struct FunnelResultView: View {
         }
     }
 
+    private var valueRangeLabel: String {
+        guard v.valueLow > 0 || v.valueHigh > 0 else { return "—" }
+        if v.valueLow == v.valueHigh { return "$\(v.valueLow)" }
+        return "$\(v.valueLow) – $\(v.valueHigh)"
+    }
+
     private var valueCard: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("ESTIMATED VALUE")
                 .font(AppFont.mono(10.5, .semibold)).tracking(1.5).foregroundStyle(goldText)
-            Text("$\(v.valueLow) – $\(v.valueHigh)")
+            Text(valueRangeLabel)
                 .font(AppFont.mono(34, .bold)).foregroundStyle(.white)
-            (Text("Suggested list price ") + Text("$\(v.suggested)").foregroundColor(AppColor.gold))
-                .font(AppFont.bodyText(12.5)).foregroundStyle(Color(white: 0.85))
+            if v.suggested > 0 {
+                (Text("Suggested list price ") + Text("$\(v.suggested)").foregroundColor(AppColor.gold))
+                    .font(AppFont.bodyText(12.5)).foregroundStyle(Color(white: 0.85))
+            }
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -99,7 +107,9 @@ struct FunnelResultView: View {
             HStack(spacing: 8) {
                 pill(v.category, gold: false)
                 pill("Condition: \(v.condition)", gold: false)
-                pill("Rarity \(String(format: "%.1f", v.rarity)) / 10", gold: true)
+                if let rarity = v.rarity {
+                    pill("Rarity \(String(format: "%.1f", rarity)) / 10", gold: true)
+                }
             }
         }
     }

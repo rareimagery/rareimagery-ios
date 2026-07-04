@@ -69,3 +69,16 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ENABLE_PREVIEWS: YES
         SWIFT_OBJC_BRIDGING_HEADER: ""
+
+  RareImageryTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: RareImageryTests
+    dependencies:
+      - target: RareImagery
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rareimagery.studio.tests
+        GENERATE_INFOPLIST_FILE: YES
