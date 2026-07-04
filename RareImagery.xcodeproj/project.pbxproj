@@ -1,0 +1,508 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0696CF3AC1702E7C6D1D3112 /* QuickProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61770B5221B245BDB58DFFF /* QuickProductView.swift */; };
+		0C839E041DA00AFA2DA15730 /* CaptureResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0B96D20614F7078C45F10 /* CaptureResultView.swift */; };
+		13BC694A3DB276945E411C16 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA2090B7F71F812E883BDE3 /* WelcomeView.swift */; };
+		18A4A55842D8B0D107B454E5 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2445F1ED90E29B6DFFA4A981 /* Colors.swift */; };
+		2567F2CF73C963B81C000EA2 /* CaptureSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3842D09D1679BEF4048F164 /* CaptureSession.swift */; };
+		265E971426A41E66373064C7 /* CaptureFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A5C9E47A9BA61B3EB253B9A /* CaptureFlowView.swift */; };
+		2C9876C1115C7A30DBEF558E /* OnboardingCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E82B3629BB3B439C96CD77A /* OnboardingCompleteView.swift */; };
+		36D980462C2475B02F1650C5 /* LivePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBD2D5957439105AD4E5BE7 /* LivePreviewView.swift */; };
+		44115F47F0E7F5A149FCA065 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2329D1365FCC1F6BE675DDC1 /* OnboardingViewModel.swift */; };
+		7189262019834F2B36122A98 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1F72CEFC12D5B9C685E15D66 /* Assets.xcassets */; };
+		90608A12B3A3D74F4005AC7D /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F4579A234B9700D34B457B /* OnboardingView.swift */; };
+		95F57ECBDFD05FD33E48BEC5 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCD1B9443C189BC2396C17B /* CaptureView.swift */; };
+		A588D09313726CC649A0A18C /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA54BC1FD4F0B21E40964DA6 /* SignInView.swift */; };
+		C652D551FE42B114F7A8A6F6 /* LiveStorePreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = E52DCBC09FAC9434E8D77A21 /* LiveStorePreview.swift */; };
+		C6DEB9CB23F3F72CD699B3D1 /* RareImageryApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3DA7227F4A46289A6B15786 /* RareImageryApp.swift */; };
+		C85CD70BCEA109C57E041C82 /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C1E9524FBBA9ADDAB01894 /* AuthSession.swift */; };
+		CCC38AC5A9E684AFCB8D2334 /* RareImageryAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3F89A9971143FA71AB0087DB /* RareImageryAPI */; };
+		CD7F15CA32FBBCEEF305A775 /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1001196AB02F77E8D882CA0 /* PermissionsView.swift */; };
+		D994862ECB4DF0FB9AAD9D8B /* TweakSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39AFBAB59CBAB1DC22C1679 /* TweakSheetView.swift */; };
+		E71D3C94F745511E66F61C59 /* AuthCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDEF011E42BC89A2AEE3A2F /* AuthCoordinator.swift */; };
+		EC5D7ACA7A9F4CF512195421 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0A5458DE40A2EFD3ED1414 /* Typography.swift */; };
+		F74395B8DD96A103FC91709E /* FilmstripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2532634375654F57EC0478B0 /* FilmstripView.swift */; };
+		F902970DFE83FD456C7AE7FD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C71612A5C1509ABC115C979 /* ContentView.swift */; };
+		FD6E82E5642BB346C352FBAB /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 259D3163C22C1448A781F6AF /* AppState.swift */; };
+		FDDFF40D2EAD0E4C889B2593 /* ImageCompression.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7C589A72AB8E84699F5092 /* ImageCompression.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		118FF32B2F2FF2E70D73A3C1 /* RareImagery.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RareImagery.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1C71612A5C1509ABC115C979 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1F72CEFC12D5B9C685E15D66 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2329D1365FCC1F6BE675DDC1 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
+		2445F1ED90E29B6DFFA4A981 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
+		2532634375654F57EC0478B0 /* FilmstripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmstripView.swift; sourceTree = "<group>"; };
+		259D3163C22C1448A781F6AF /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		311934CBAAD314C67769DDF2 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		3C0A5458DE40A2EFD3ED1414 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		4BA2090B7F71F812E883BDE3 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		57F4579A234B9700D34B457B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		5EBD2D5957439105AD4E5BE7 /* LivePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePreviewView.swift; sourceTree = "<group>"; };
+		6A5C9E47A9BA61B3EB253B9A /* CaptureFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureFlowView.swift; sourceTree = "<group>"; };
+		8E82B3629BB3B439C96CD77A /* OnboardingCompleteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingCompleteView.swift; sourceTree = "<group>"; };
+		A5C0B96D20614F7078C45F10 /* CaptureResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureResultView.swift; sourceTree = "<group>"; };
+		ACDEF011E42BC89A2AEE3A2F /* AuthCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthCoordinator.swift; sourceTree = "<group>"; };
+		B1001196AB02F77E8D882CA0 /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
+		B405CED2BDDEFAFE0140472B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		BB7C589A72AB8E84699F5092 /* ImageCompression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompression.swift; sourceTree = "<group>"; };
+		C3C1E9524FBBA9ADDAB01894 /* AuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSession.swift; sourceTree = "<group>"; };
+		D3DA7227F4A46289A6B15786 /* RareImageryApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RareImageryApp.swift; sourceTree = "<group>"; };
+		D6EA234D4D4FB473B8141BDA /* RareImageryAPI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RareImageryAPI; path = Packages/RareImageryAPI; sourceTree = SOURCE_ROOT; };
+		DA54BC1FD4F0B21E40964DA6 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		E1121E2A829510E995FF64D6 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		E52DCBC09FAC9434E8D77A21 /* LiveStorePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveStorePreview.swift; sourceTree = "<group>"; };
+		E61770B5221B245BDB58DFFF /* QuickProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickProductView.swift; sourceTree = "<group>"; };
+		EDCD1B9443C189BC2396C17B /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
+		F3842D09D1679BEF4048F164 /* CaptureSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSession.swift; sourceTree = "<group>"; };
+		F39AFBAB59CBAB1DC22C1679 /* TweakSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakSheetView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B5368659BA10F13CAEE3A760 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CCC38AC5A9E684AFCB8D2334 /* RareImageryAPI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2168B151DE790CF23B027AD5 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				6A5C9E47A9BA61B3EB253B9A /* CaptureFlowView.swift */,
+				A5C0B96D20614F7078C45F10 /* CaptureResultView.swift */,
+				EDCD1B9443C189BC2396C17B /* CaptureView.swift */,
+				2532634375654F57EC0478B0 /* FilmstripView.swift */,
+				BB7C589A72AB8E84699F5092 /* ImageCompression.swift */,
+			);
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		2494956931879306948CBE09 /* State */ = {
+			isa = PBXGroup;
+			children = (
+				259D3163C22C1448A781F6AF /* AppState.swift */,
+				C3C1E9524FBBA9ADDAB01894 /* AuthSession.swift */,
+				F3842D09D1679BEF4048F164 /* CaptureSession.swift */,
+			);
+			path = State;
+			sourceTree = "<group>";
+		};
+		3C8D082F429A56F542E7D784 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				E1121E2A829510E995FF64D6 /* Debug.xcconfig */,
+				311934CBAAD314C67769DDF2 /* Release.xcconfig */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		3E765655BF5C45251F037F6C = {
+			isa = PBXGroup;
+			children = (
+				3C8D082F429A56F542E7D784 /* Configuration */,
+				D3C3ECC3217C34C10840AF2B /* Packages */,
+				CD8BA088690FFB97DEB27A84 /* RareImagery */,
+				69CD25CB4C8FEABCA7FF7DDE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		69CD25CB4C8FEABCA7FF7DDE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				118FF32B2F2FF2E70D73A3C1 /* RareImagery.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		71F284B63516C7B8982FF438 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				2445F1ED90E29B6DFFA4A981 /* Colors.swift */,
+				3C0A5458DE40A2EFD3ED1414 /* Typography.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		B251D13FD22C87106551775A /* Product */ = {
+			isa = PBXGroup;
+			children = (
+				E61770B5221B245BDB58DFFF /* QuickProductView.swift */,
+			);
+			path = Product;
+			sourceTree = "<group>";
+		};
+		B48ABB5AE383096FEBB7FD00 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				5EBD2D5957439105AD4E5BE7 /* LivePreviewView.swift */,
+				E52DCBC09FAC9434E8D77A21 /* LiveStorePreview.swift */,
+				8E82B3629BB3B439C96CD77A /* OnboardingCompleteView.swift */,
+				57F4579A234B9700D34B457B /* OnboardingView.swift */,
+				2329D1365FCC1F6BE675DDC1 /* OnboardingViewModel.swift */,
+				B1001196AB02F77E8D882CA0 /* PermissionsView.swift */,
+				F39AFBAB59CBAB1DC22C1679 /* TweakSheetView.swift */,
+				4BA2090B7F71F812E883BDE3 /* WelcomeView.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		CD8BA088690FFB97DEB27A84 /* RareImagery */ = {
+			isa = PBXGroup;
+			children = (
+				ECCA696B7E7C95A920A80D3E /* Auth */,
+				2168B151DE790CF23B027AD5 /* Capture */,
+				B48ABB5AE383096FEBB7FD00 /* Onboarding */,
+				B251D13FD22C87106551775A /* Product */,
+				2494956931879306948CBE09 /* State */,
+				71F284B63516C7B8982FF438 /* Theme */,
+				1F72CEFC12D5B9C685E15D66 /* Assets.xcassets */,
+				1C71612A5C1509ABC115C979 /* ContentView.swift */,
+				B405CED2BDDEFAFE0140472B /* Info.plist */,
+				D3DA7227F4A46289A6B15786 /* RareImageryApp.swift */,
+			);
+			path = RareImagery;
+			sourceTree = "<group>";
+		};
+		D3C3ECC3217C34C10840AF2B /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				D6EA234D4D4FB473B8141BDA /* RareImageryAPI */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		ECCA696B7E7C95A920A80D3E /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				ACDEF011E42BC89A2AEE3A2F /* AuthCoordinator.swift */,
+				DA54BC1FD4F0B21E40964DA6 /* SignInView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F2CA76FEBF9AB8C9EF8B3576 /* RareImagery */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 332F92AC741EAE9B7EDD63ED /* Build configuration list for PBXNativeTarget "RareImagery" */;
+			buildPhases = (
+				5F91D97F5CAE0B65CAE78591 /* Sources */,
+				4E5E3F2E509B8C2889B4DF7B /* Resources */,
+				B5368659BA10F13CAEE3A760 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RareImagery;
+			packageProductDependencies = (
+				3F89A9971143FA71AB0087DB /* RareImageryAPI */,
+			);
+			productName = RareImagery;
+			productReference = 118FF32B2F2FF2E70D73A3C1 /* RareImagery.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		797577000D8FA223D9EB8B76 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					F2CA76FEBF9AB8C9EF8B3576 = {
+						DevelopmentTeam = 7ZGZLG2SRQ;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = AD9A5479E1137F884C835C38 /* Build configuration list for PBXProject "RareImagery" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 3E765655BF5C45251F037F6C;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F4C8C6A333C2EE7EBFF24670 /* XCLocalSwiftPackageReference "Packages/RareImageryAPI" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 69CD25CB4C8FEABCA7FF7DDE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F2CA76FEBF9AB8C9EF8B3576 /* RareImagery */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4E5E3F2E509B8C2889B4DF7B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7189262019834F2B36122A98 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5F91D97F5CAE0B65CAE78591 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FD6E82E5642BB346C352FBAB /* AppState.swift in Sources */,
+				E71D3C94F745511E66F61C59 /* AuthCoordinator.swift in Sources */,
+				C85CD70BCEA109C57E041C82 /* AuthSession.swift in Sources */,
+				265E971426A41E66373064C7 /* CaptureFlowView.swift in Sources */,
+				0C839E041DA00AFA2DA15730 /* CaptureResultView.swift in Sources */,
+				2567F2CF73C963B81C000EA2 /* CaptureSession.swift in Sources */,
+				95F57ECBDFD05FD33E48BEC5 /* CaptureView.swift in Sources */,
+				18A4A55842D8B0D107B454E5 /* Colors.swift in Sources */,
+				F902970DFE83FD456C7AE7FD /* ContentView.swift in Sources */,
+				F74395B8DD96A103FC91709E /* FilmstripView.swift in Sources */,
+				FDDFF40D2EAD0E4C889B2593 /* ImageCompression.swift in Sources */,
+				36D980462C2475B02F1650C5 /* LivePreviewView.swift in Sources */,
+				C652D551FE42B114F7A8A6F6 /* LiveStorePreview.swift in Sources */,
+				2C9876C1115C7A30DBEF558E /* OnboardingCompleteView.swift in Sources */,
+				90608A12B3A3D74F4005AC7D /* OnboardingView.swift in Sources */,
+				44115F47F0E7F5A149FCA065 /* OnboardingViewModel.swift in Sources */,
+				CD7F15CA32FBBCEEF305A775 /* PermissionsView.swift in Sources */,
+				0696CF3AC1702E7C6D1D3112 /* QuickProductView.swift in Sources */,
+				C6DEB9CB23F3F72CD699B3D1 /* RareImageryApp.swift in Sources */,
+				A588D09313726CC649A0A18C /* SignInView.swift in Sources */,
+				D994862ECB4DF0FB9AAD9D8B /* TweakSheetView.swift in Sources */,
+				EC5D7ACA7A9F4CF512195421 /* Typography.swift in Sources */,
+				13BC694A3DB276945E411C16 /* WelcomeView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		23AC11D2344BDA2F1095DC75 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E1121E2A829510E995FF64D6 /* Debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7ZGZLG2SRQ;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		7436DC8515F74AC629142FA2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = E1121E2A829510E995FF64D6 /* Debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = RareImagery/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rareimagery.studio;
+				PRODUCT_NAME = RareImagery;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		E7E44A73FB049E2BAB7E90EE /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 311934CBAAD314C67769DDF2 /* Release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = RareImagery/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.rareimagery.studio;
+				PRODUCT_NAME = RareImagery;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		ED0F930A88C1FD564E52EB70 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 311934CBAAD314C67769DDF2 /* Release.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7ZGZLG2SRQ;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		332F92AC741EAE9B7EDD63ED /* Build configuration list for PBXNativeTarget "RareImagery" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7436DC8515F74AC629142FA2 /* Debug */,
+				E7E44A73FB049E2BAB7E90EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AD9A5479E1137F884C835C38 /* Build configuration list for PBXProject "RareImagery" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				23AC11D2344BDA2F1095DC75 /* Debug */,
+				ED0F930A88C1FD564E52EB70 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F4C8C6A333C2EE7EBFF24670 /* XCLocalSwiftPackageReference "Packages/RareImageryAPI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/RareImageryAPI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3F89A9971143FA71AB0087DB /* RareImageryAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RareImageryAPI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 797577000D8FA223D9EB8B76 /* Project object */;
+}

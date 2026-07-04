@@ -21,6 +21,23 @@ settings:
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
+# Explicit shared scheme so Xcode Cloud (and CI generally) has something to
+# build — xcodegen writes defined schemes into xcshareddata/xcschemes (shared),
+# whereas an undefined scheme is only created per-user on Xcode open.
+schemes:
+  RareImagery:
+    build:
+      targets:
+        RareImagery: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
 packages:
   RareImageryAPI:
     path: Packages/RareImageryAPI
