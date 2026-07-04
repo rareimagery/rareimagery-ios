@@ -21,11 +21,14 @@ settings:
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
-# Explicit shared scheme so Xcode Cloud (and CI generally) has something to
+# Explicit shared schemes so Xcode Cloud (and CI generally) has something to
 # build — xcodegen writes defined schemes into xcshareddata/xcschemes (shared),
 # whereas an undefined scheme is only created per-user on Xcode open.
+# Two names, one app target: the Xcode Cloud workflow invokes
+# `-scheme RareImageryStudio`; local dev + docs use `-scheme RareImagery`.
+# Both build the RareImagery target. Keep both until the workflow is repointed.
 schemes:
-  RareImagery:
+  RareImagery: &appScheme
     build:
       targets:
         RareImagery: all
@@ -37,6 +40,7 @@ schemes:
       config: Debug
     archive:
       config: Release
+  RareImageryStudio: *appScheme
 
 packages:
   RareImageryAPI:
