@@ -1,8 +1,15 @@
 ## Build generated
 build/
 DerivedData/
-*.xcodeproj/
-*.xcworkspace/
+# RareImagery.xcodeproj IS committed (xcodegen-generated) so Xcode Cloud can
+# resolve the project + shared scheme from the git tree — ci_post_clone.sh
+# regenerates it on CI, but plan-time validation reads git. project.yml stays
+# the source of truth: regenerate with `xcodegen generate` and commit the diff,
+# never hand-edit the pbxproj. Only per-user cruft below is ignored.
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+*.xcworkspace/xcuserdata/
 
 ## Various settings
 *.pbxuser

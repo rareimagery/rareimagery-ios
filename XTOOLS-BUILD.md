@@ -11,7 +11,7 @@ You are building the **value-first pre-login Video Submission Flow** in `~/Deskt
 | | |
 |---|---|
 | Path | `~/Desktop/rareimagery-ios` |
-| **Project gen** | **xcodegen** — `project.yml` is the source of truth; `RareImagery.xcodeproj` is **generated + gitignored**. See §2. |
+| **Project gen** | **xcodegen** — `project.yml` is the source of truth; `RareImagery.xcodeproj` is **generated but COMMITTED** (Xcode Cloud reads the project + shared scheme from git). Regenerate + commit the diff; never hand-edit. See §2. |
 | Toolchain | Xcode 16+ · Swift 5.9 · iOS 17 target · SwiftUI (`@Observable`/`@Environment`) · dark-only |
 | Scheme / target | `RareImagery` · SPM package `Packages/RareImageryAPI` (mobile↔BFF contract) |
 | Bundle id / team | `com.rareimagery.studio` · team `7ZGZLG2SRQ` (both in `project.yml`) |
@@ -20,7 +20,8 @@ You are building the **value-first pre-login Video Submission Flow** in `~/Deskt
 | Mascot | `Image("BudHound")` (asset catalog). |
 
 ## 2. ⚠️ The build workflow (xcodegen — read this)
-- **`project.yml` is authoritative; the `.xcodeproj` is generated.** Never hand-edit `project.pbxproj` (it's regenerated + gitignored).
+- **`project.yml` is authoritative; the `.xcodeproj` is generated but COMMITTED.** Never hand-edit `project.pbxproj` — regenerate with `xcodegen generate` and commit the resulting diff. It's committed (not gitignored) because **Xcode Cloud resolves the project + shared scheme from the git tree at plan time**; a `ci_post_clone.sh` that regenerates at runtime does NOT satisfy that validation. Only per-user `xcuserdata/` is ignored. The shared scheme comes from the `schemes:` block in `project.yml` (defined schemes → shared; undefined → per-user only, invisible to CI).
+- **Merge hygiene:** since the pbxproj is tracked, a `project.yml` change from two branches can conflict in `project.pbxproj`. Resolve by taking either side then re-running `xcodegen generate` (project.yml is the real source) and committing the regenerated pbxproj.
 - **Adding files is free:** `sources: - path: RareImagery` is **recursive**, so any file you create under `RareImagery/**` is auto-included on the next generate. No per-file registration.
 - **`Info.plist` is generated** from `project.yml` → `targets.RareImagery.info.properties`. So **permissions, URL schemes, and `UIAppFonts` go in `project.yml`**, not a hand-edited plist. (Camera/mic/photo usage strings already there.)
 - **Always:** after creating files or editing `project.yml` →
