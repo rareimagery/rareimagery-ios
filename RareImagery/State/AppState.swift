@@ -74,6 +74,19 @@ final class AppState {
     /// cleanest signal that whatever's in `.accessToken` is the trial JWT,
     /// not a production one — no need to decode the JWT itself to find out.
     func bootstrap() async {
+        #if DEBUG
+        // ponytail: useMocks means "no backend" — mint the anonymous session
+        // locally so the value-first funnel is reachable offline. Real mint
+        // (bootstrapAnonymous) runs the moment useMocks flips to false.
+        if useMocks {
+            let claims = AnonymousClaims(
+                deviceId: "mock-device",
+                exp: Int(Date().timeIntervalSince1970) + 86_400
+            )
+            session.setAnonymous(claims: claims, freeUsesRemaining: AuthSession.anonymousFreeUsesCap)
+            return
+        }
+        #endif
         if await tryProductionSession() { return }
         if await tryExistingAnonymousSession() { return }
         await bootstrapAnonymous()
