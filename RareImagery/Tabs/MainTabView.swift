@@ -178,33 +178,99 @@ struct ProductsTabView: View {
 
 }
 
+/// Page tab — the creator's public-facing storefront as visitors see it:
+/// X avatar + banner (captured at account creation) over the grid of
+/// products they've published. Read-only preview; editing lives in Products.
 struct PageTabView: View {
     @Environment(AppState.self) private var state
+    @State private var profile: StoreProfile?
+    @State private var published: [StoreProduct] = []
+    @State private var loading = false
+
+    private var handle: String { state.session.claims?.handle ?? "yourname" }
+    private var slug: String { profile?.storeSlug ?? state.session.claims?.slug ?? handle }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                LiveStorePreview(
-                    displayName: state.session.displayHandle ?? "Your name",
-                    handle: state.session.claims?.handle ?? "yourname",
-                    bio: "",
-                    avatarURL: nil,
-                    bannerURL: nil,
-                    colorScheme: .default,
-                    slug: state.session.claims?.slug ?? "yourname"
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                VStack(spacing: 20) {
+                    LiveStorePreview(
+                        displayName: profile?.displayName ?? state.session.displayHandle ?? "Your name",
+                        handle: handle,
+                        bio: profile?.bio ?? "",
+                        avatarURL: profile?.avatarURL,
+                        bannerURL: profile?.bannerURL,
+                        colorScheme: .default,
+                        slug: slug
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
 
-                Text("Full page editor coming soon — tweak colors, bio, and featured posts from here.")
-                    .font(AppFont.callout)
-                    .foregroundStyle(AppColor.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(24)
+                    publishedSection
+                }
             }
             .background(AppColor.background)
             .navigationTitle("Page")
+            .refreshable { await load() }
+            .task { await load() }
         }
+    }
+
+    @ViewBuilder private var publishedSection: some View {
+        if loading && published.isEmpty {
+            ProgressView().tint(AppColor.gold).padding(.top, 30)
+        } else if published.isEmpty {
+            ContentUnavailableView(
+                "No live products yet",
+                systemImage: "storefront",
+                description: Text("Publish a product from the Products tab and it shows up here on your store page.")
+            )
+            .padding(.top, 20)
+        } else {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(published) { product in
+                    storeCard(product)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private func storeCard(_ product: StoreProduct) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            AsyncImage(url: product.imageUrl.flatMap { URL(string: $0) }) { phase in
+                switch phase {
+                case .success(let image): image.resizable().scaledToFill()
+                default: AppColor.surface.overlay(
+                    Image(systemName: "photo").foregroundStyle(AppColor.textSecondary)
+                )
+                }
+            }
+            .frame(height: 140)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            Text(product.title ?? "Untitled item")
+                .font(AppFont.bodyText(14)).foregroundStyle(AppColor.textPrimary)
+                .lineLimit(2)
+            if let priceDisplay = product.priceDisplay {
+                Text(priceDisplay).font(AppFont.mono(14)).foregroundStyle(AppColor.gold)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColor.border, lineWidth: 1))
+    }
+
+    private func load() async {
+        loading = true
+        defer { loading = false }
+        async let profileResult = try? await state.productRepository.myProfile()
+        async let productsResult = (try? await state.productRepository.listMine()) ?? []
+        profile = await profileResult
+        published = await productsResult.filter { $0.isPublished }
     }
 }
 

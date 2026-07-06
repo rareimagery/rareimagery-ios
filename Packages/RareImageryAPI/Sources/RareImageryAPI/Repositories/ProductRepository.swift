@@ -208,6 +208,20 @@ public actor ProductRepository {
         return response.products
     }
 
+    // MARK: - GET /api/stores/edit  (the signed-in creator's public profile)
+
+    /// Loads the creator's storefront profile — X avatar, banner, display
+    /// name, bio, slug — for the Page tab's public-page preview.
+    public func myProfile() async throws -> StoreProfile {
+        let endpoint = APIEndpoint(
+            path: "/api/stores/edit",
+            method: .get,
+            requiresAuth: true,
+            timeout: 20
+        )
+        return try await client.send(endpoint)
+    }
+
     // MARK: - GET /api/products/[uuid]
 
     public func get(uuid: String) async throws -> ProductDetail {

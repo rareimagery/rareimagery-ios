@@ -1,9 +1,31 @@
 # RareImagery iOS — Code Review
 
-**Review date:** 2026-07-05  
+**Review date:** 2026-07-06 (updated)  
+**Previous review:** 2026-07-05  
+**Branch:** `feat/value-first-flow-reconcile` (tip `9002600`)  
 **Repository:** `rareimagery-ios`  
 **Reviewer scope:** Static codebase review (no live BFF/Drupal verification)  
-**Codebase state:** `useMocks = false` in [`AppState.swift`](../RareImagery/State/AppState.swift); live BFF integration assumed deployed locally.
+**Codebase state:** `useMocks = false` in [`AppState.swift`](../RareImagery/State/AppState.swift); live BFF integration assumed for funnel, auth, and products.
+
+---
+
+## Changelog Since July 5 Review
+
+| Commit | Change |
+|--------|--------|
+| `2790544` | Auth hardening: proactive refresh, bootstrap refresh, `AuthEventHandlers`, session invalidation |
+| `8699b3d` | OAuth presentation anchor fix, `X_CLIENT_ID` placeholder guard, dedup callback handler, DEBUG skip sign-in |
+| `16a335c` | Brand fonts bundled (Space Grotesk, Hanken Grotesk, JetBrains Mono); violet/gold theme tokens |
+| `1243142` | Foreground retry for anonymous bootstrap when BFF was briefly down |
+| `4fcc820` | JWT camelCase decode fix (`storeUuid`); legacy wizard uses configured base URL |
+| `9490300` | Funnel tolerant category/condition decode; surfaces real valuation errors |
+| `4785eb2` | **Routing:** signed-in users go straight to `MainTabView` — `LivePreviewView` interstitial removed |
+| `7b8c734` | Home **Create** routes to video funnel, not merch generator |
+| `1095caf` / `c1caadb` | `CameraPicker` added; auto-open camera removed (sheet deadlock) |
+| `c1caadb` | Signed-in product creation reuses video+Grok funnel (`productMode: true`) |
+| `4d690a9` | Claimed funnel video surfaces as editable first product |
+| `04ca98d` | **Creations → Products** tab; server-backed list via `GET /api/stores/products` |
+| `9002600` | `ProductEditView` — tap product to edit title/description/price + publish |
 
 ---
 
@@ -11,42 +33,47 @@
 
 ### Verdict
 
-The RareImagery iOS app is a **mature thin client** that has outgrown its README's "Phase A in progress" description. It ships multiple creator flows — anonymous video valuation funnel, X OAuth sign-in, post-sign-in onboarding, OnePageCreator merch generation with publish, photo capture/analysis, and Circle social features — over a well-factored local Swift Package (`RareImageryAPI`).
+The RareImagery iOS app is a **production-oriented thin client** that has moved well past its README's "Phase A in progress" description. Since the July 5 review, the team closed all four P0 auth blockers, shipped a server-backed Products tab with edit/publish, and simplified post-sign-in routing so creators land directly on Home.
 
-The app is **not TestFlight-ready** without auth session hardening and completion of several partially wired surfaces (QuickProduct create, slug pre-check, server-backed creations list). The core happy path (anonymous trial → X sign-in → OnePageCreator publish) is implemented and connected to live APIs.
+The primary create path is now **video → Grok valuation → product draft** (anonymous claim via X OAuth, or signed-in via `productMode`). Photo capture and OnePageCreator remain as secondary entry points from Home.
+
+The app is **closer to TestFlight-ready** than the prior review indicated, but still needs README sync, a few stub surfaces (QuickProduct, TweakSheet slug check), and one failing JWT unit test before calling auth "done."
 
 ### Readiness Snapshot
 
-| Area | Status | Notes |
-|------|--------|-------|
-| X OAuth sign-in | **Implemented** | PKCE via `ASWebAuthenticationSession`; tokens in Keychain |
-| Anonymous trial funnel | **Implemented** | Video → valuation → draft claim via OAuth |
-| Post-sign-in onboarding | **Implemented** | `LivePreviewView` → `TweakSheetView` → `OnePageCreator` |
-| OnePageCreator (primary create) | **Implemented** | merch-ideas → design generate → publish wired (Phase 4.4) |
-| Photo capture pipeline | **Partial** | Built but orphaned from main navigation |
-| Circle social | **Implemented** | Phase 1 complete per [PHASE_1_COMPLETE.md](PHASE_1_COMPLETE.md) |
-| QuickProduct sell form | **Stub** | UI complete; `ProductRepository.create` not wired |
-| Creations tab | **Partial** | Shows local `CaptureSession` draft only; no server list |
-| Page editor tab | **Stub** | "Coming soon" placeholder |
-| Auth session hardening | **Partial** | Refresh on 401 exists; proactive refresh and global sign-out missing |
-| Push notifications | **Missing** | BFF web-push only; no APNs path |
-| Apple Sign-In | **Missing** | BFF stub returns 501; no client UI |
+| Area | Jul 5 | Current (Jul 6) | Notes |
+|------|-------|-----------------|-------|
+| X OAuth sign-in | Implemented | **Implemented + hardened** | PKCE, presentation anchor, placeholder guard, DEBUG skip |
+| Auth session hardening | Partial | **Implemented** | Proactive refresh, bootstrap refresh, global sign-out |
+| Anonymous trial funnel | Implemented | **Implemented** | Live API; foreground bootstrap retry |
+| Post-sign-in onboarding | LivePreview → tabs | **Removed** | Signed-in → `MainTabView` directly |
+| Primary create (signed-in) | OnePageCreator | **Video funnel** | Home Create → `VideoSubmissionFunnelView(productMode: true)` |
+| OnePageCreator (merch) | Implemented | **Secondary path** | Home → "Design merch instead" |
+| Products tab | Local draft only | **Implemented** | `listMine()` + `ProductEditView` edit/publish |
+| Photo capture pipeline | Orphaned | **Secondary path** | Home → "Use photos instead" → `FirstProductFlowView` |
+| Circle social | Implemented | Implemented | Phase 1 complete per [PHASE_1_COMPLETE.md](PHASE_1_COMPLETE.md) |
+| QuickProduct sell form | Stub | **Still stub** | UI complete; `ProductRepository.create` not wired |
+| Page editor tab | Stub | **Partial** | `LiveStorePreview` preview; full editor still "coming soon" |
+| Push notifications | Missing | Missing | BFF web-push only; no APNs path |
+| Apple Sign-In | Missing | Missing | BFF stub returns 501; no client UI |
+| Brand fonts | May fall back | **Bundled** | 10 TTFs in `RareImagery/Fonts/` |
+| Unit tests | 29 | **35** (+1 failing) | `JWTDecoderTests` needs camelCase fixture update |
 
-### Top 5 Risks
+### Top 5 Risks (Updated)
 
-1. **Expired-access bootstrap gap** — On launch, if the access JWT is expired but a refresh token exists, `tryProductionSession()` may fail decode and fall through to anonymous re-bootstrap instead of refreshing first.
-2. **No global session drop on unrecoverable 401** — `APIClient` throws `unauthorized` after a failed refresh but never signs the user out; stale sessions can persist in a broken state.
-3. **Orphaned legacy flows** — `FirstProductFlowView`, `WelcomeView`, `CaptureResultView`, and the photo capture pipeline are built but unreachable from the live router, increasing maintenance cost.
-4. **Thin test coverage** — 29 unit tests across PKCE, JWT decode, error parsing, and funnel valuation mapping; no integration, ViewModel, or UI tests.
-5. **README and contract drift** — README still describes Phase A; `CLAUDE.md` publish-path guidance conflicts with intentional `PublishProductRepository` usage for OnePageCreator.
+1. **README and in-source doc drift** — README still says Phase A "in progress" and references nonexistent `TokenRefresher`; `ContentView.swift` header still describes removed `LivePreviewView` routing.
+2. **Stub create surfaces** — `QuickProductView` fakes product creation; `TweakSheetView.checkSlugRemote` always returns true (and the view is orphaned after LivePreview removal).
+3. **Orphaned legacy screens** — `LivePreviewView`, `WelcomeView`, `PermissionsView`, `TweakSheetView`, `CaptureResultView` remain in tree but are unreachable or only reachable via `#Preview` / defensive fallback paths.
+4. **Thin test coverage** — 35 unit tests (+6 auth tests since review); 1 JWT test failing after camelCase decode change; no ViewModel, integration, or UI tests.
+5. **Funnel signed-in non-productMode branch** — Generic signed-in CTA in `FunnelResultView` still has an empty Phase 5 stub when not in `productMode`.
 
 ### Recommended Next Sprint
 
-1. **Auth hardening** — Proactive refresh 60s before expiry, bootstrap refresh when access is expired, global sign-out on unrecoverable 401, reconcile deep-link OAuth with draft-claim params.
-2. **Wire remaining create surfaces** — `QuickProductView` product create, `TweakSheetView` slug pre-check via BFF.
-3. **Server-backed Creations tab** — Replace local-only draft display with a product list from the BFF.
-4. **Prune or route legacy screens** — Delete unreachable flows or wire them into navigation intentionally.
-5. **Expand tests and sync docs** — APIClient refresh/retry tests, ViewModel state-machine tests, update README phase status.
+1. **Fix `JWTDecoderTests`** — Update test fixture to use camelCase `storeUuid` (decode change in `4fcc820` broke `testDecodesValidToken`).
+2. **Sync documentation** — Update README phases, remove `TokenRefresher` reference, refresh `ContentView` header comment, note `TESTFLIGHT.md`.
+3. **Wire or remove stubs** — `QuickProductView.createProduct()`, `TweakSheetView.checkSlugRemote`, or delete orphaned onboarding screens.
+4. **Prune legacy screens** — Delete or intentionally route `LivePreviewView`, `WelcomeView`, `PermissionsView`, `TweakSheetView`.
+5. **Expand tests** — ViewModel state-machine tests, snapshot tests for Products tab and ProductEditView.
 
 ---
 
@@ -64,12 +91,14 @@ flowchart LR
     subgraph bff [x-store-next BFF]
         MobileAPI["/api/mobile/*"]
         ProductsAPI["/api/products/*"]
+        StoresAPI["/api/stores/products"]
         VisionAPI["/api/vision/*"]
     end
     SwiftUI --> AppState
     AppState --> SPM
     SPM -->|"Bearer JWT"| MobileAPI
     SPM --> ProductsAPI
+    SPM --> StoresAPI
     SPM --> VisionAPI
 ```
 
@@ -83,23 +112,21 @@ flowchart LR
 | [`Configuration/`](../Configuration/) | xcconfig for API base URL and X client ID |
 | [`project.yml`](../project.yml) | XcodeGen source of truth |
 
-**106 Swift source files** across app + SPM. Zero third-party dependencies. iOS 17+, Swift 5.9, `@Observable` throughout.
+**114 Swift source files** across app + SPM (was 106). Zero third-party dependencies. iOS 17+, Swift 5.9, `@Observable` throughout.
 
 ### Entry Points
 
-- **App launch:** [`RareImageryApp.swift`](../RareImagery/RareImageryApp.swift) — creates `AppState`, runs `bootstrap()`, handles `rareimagery://auth/callback` deep links.
+- **App launch:** [`RareImageryApp.swift`](../RareImagery/RareImageryApp.swift) — creates `AppState`, runs `bootstrap()`, retries anonymous mint on foreground when BFF was briefly unreachable.
 - **Root router:** [`ContentView.swift`](../RareImagery/ContentView.swift) — routes by `AuthSession.status` (checking / signedOut / signedIn / anonymous).
-- **Composition root:** [`AppState.swift`](../RareImagery/State/AppState.swift) — wires 9 repositories, `AuthService`, `APIClient`, `KeychainStore`, and `CaptureSession`.
+- **Composition root:** [`AppState.swift`](../RareImagery/State/AppState.swift) — wires 9 repositories, `AuthService`, `APIClient`, `KeychainStore`, `CaptureSession`, and `AuthEventHandlers`.
 
 ### Session Tiers
-
-The app supports three distinct session states:
 
 | Tier | Trigger | Destination |
 |------|---------|-------------|
 | `signedOut` | No tokens, bootstrap failure | `SignInView` |
-| `anonymous` | Fresh device or expired production session | Video funnel (first launch) → `MainTabView` |
-| `signedIn` | Refresh token + valid access JWT | `LivePreviewView` (first time) → `MainTabView` |
+| `anonymous` | Fresh device or no production refresh token | Video funnel (first launch) → `MainTabView` |
+| `signedIn` | Refresh token + valid/refreshed access JWT | **`MainTabView` directly** (LivePreview interstitial removed) |
 
 ---
 
@@ -107,30 +134,34 @@ The app supports three distinct session states:
 
 ### Strengths
 
-**Clean package separation.** All networking, auth, and API models live in the testable `RareImageryAPI` SPM package. The app target is mostly SwiftUI views and thin coordinators. This matches the thin-client contract in [`CLAUDE.md`](../CLAUDE.md).
+**Clean package separation.** All networking, auth, and API models live in the testable `RareImageryAPI` SPM package. The app target is mostly SwiftUI views and thin coordinators. Matches the thin-client contract in [`CLAUDE.md`](../CLAUDE.md).
 
-**Modern Swift patterns.** The codebase uses `@Observable` for UI state, `actor` types for thread-safe networking and Keychain access, and `async/await` exclusively — no TCA, Redux, Combine, or third-party reactive libraries.
+**Auth hardening landed.** `AuthEventHandlers` bridges the SPM `APIClient` actor to `@MainActor` `AppState` for token refresh and session invalidation — a clean pattern for global sign-out without coupling the package to SwiftUI.
 
-**Traceable dependency injection.** `AppState.init()` manually constructs all services and repositories. Views access them via `@Environment(AppState.self)`. No DI framework; easy to follow.
+**Modern Swift patterns.** `@Observable`, `actor` types, `async/await` exclusively — no TCA, Redux, Combine, or third-party reactive libraries.
 
-**Inline BFF contract documentation.** Repositories carry comments referencing BFF routes, error codes, phase history, and encoding quirks. This reduces the need to cross-reference the BFF repo for every endpoint.
+**Primary create path unified.** Anonymous funnel and signed-in Home both use `VideoSubmissionFunnelView`; signed-in path passes `productMode: true` so the BFF binds the draft to the creator without a second OAuth round-trip.
 
-**Offline demo mode.** `AppState.useMocks` toggles mock valuations in the funnel and capture flows without view changes — useful for UI demos when the BFF is unavailable.
+**Brand typography resolved.** Custom fonts are bundled and registered via `UIAppFonts` in `project.yml`; `Typography.swift` references correct PostScript family names.
+
+**Offline demo mode.** `AppState.useMocks` (currently `false`) toggles mock valuations and local anonymous bootstrap in DEBUG without view changes.
 
 ### Concerns
 
-**Parallel legacy flows.** Several fully built screens are unreachable from the live router:
+**Parallel legacy flows.** Several fully built screens are unreachable or only secondary:
 
-- [`FirstProductFlowView`](../RareImagery/Onboarding/FirstProduct/FirstProductFlowView.swift) — superseded by OnePageCreator
-- [`WelcomeView`](../RareImagery/Onboarding/WelcomeView.swift) — richer sign-in UX, not wired
-- [`PermissionsView`](../RareImagery/Onboarding/PermissionsView.swift) — camera permission education, not wired
-- [`CaptureResultView`](../RareImagery/Capture/CaptureResultView.swift) — built but `CaptureFlowView` uses inline preview instead
+- [`LivePreviewView`](../RareImagery/Onboarding/LivePreviewView.swift) — removed from router; file remains
+- [`TweakSheetView`](../RareImagery/Onboarding/TweakSheetView.swift) — was presented from LivePreview; orphaned
+- [`WelcomeView`](../RareImagery/Onboarding/WelcomeView.swift), [`PermissionsView`](../RareImagery/Onboarding/PermissionsView.swift) — not wired
+- [`CaptureResultView`](../RareImagery/Capture/CaptureResultView.swift) — built; `CaptureFlowView` uses inline preview
 
-**DI inconsistency.** `CircleService` is lazy-instantiated inside the Circle tab rather than owned by `AppState`, unlike every other service.
+**DI inconsistency.** `CircleService` is lazy-instantiated inside the Circle tab rather than owned by `AppState`.
 
-**Mixed JSON encoding.** Some repositories use `APIEndpoint.json()` (snake_case), others manually encode with `.useDefaultKeys` to match specific BFF Zod schemas. Documented per route but error-prone when adding new endpoints.
+**Mixed JSON encoding.** Some repositories use `APIEndpoint.json()` (snake_case), others manually encode with `.useDefaultKeys` to match specific BFF Zod schemas.
 
-**Swift 6 concurrency risk.** `Analytics` uses `nonisolated(unsafe)` statics for the client and session ID. Works today but may need attention under strict concurrency checking.
+**Swift 6 concurrency risk.** `Analytics` uses `nonisolated(unsafe)` statics — may need attention under strict concurrency checking.
+
+**Stale in-file documentation.** `ContentView.swift` header still describes LivePreview routing that was removed in `4785eb2`.
 
 ---
 
@@ -140,93 +171,60 @@ The app supports three distinct session states:
 
 | Step | File | Behavior |
 |------|------|----------|
-| Bootstrap | [`AppState.bootstrap()`](../RareImagery/State/AppState.swift) | Production (refresh token present) → signedIn; else anonymous mint |
-| X OAuth PKCE | [`AuthService`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Auth/AuthService.swift), [`AuthCoordinator`](../RareImagery/Auth/AuthCoordinator.swift) | Build authorize URL → `ASWebAuthenticationSession` → exchange code |
-| Token storage | [`KeychainStore`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Auth/KeychainStore.swift), [`APIClient.persist()`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Client/APIClient.swift) | Access + refresh tokens in Keychain |
-| JWT decode | [`JWTDecoder`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Auth/JWTDecoder.swift) | Decode-only (no signature verification); validates `aud` and `exp` |
-| Deep link | [`RareImageryApp.onOpenURL`](../RareImagery/RareImageryApp.swift) | Parallel callback path for `rareimagery://auth/callback` |
+| Bootstrap | [`AppState.bootstrap()`](../RareImagery/State/AppState.swift) | Production refresh → signedIn; else anonymous mint |
+| Bootstrap refresh | `tryProductionSession()` | **NEW:** refreshes expired access before decode; signs out on failure (never downgrades to anonymous) |
+| X OAuth PKCE | [`AuthService`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Auth/AuthService.swift), [`AuthCoordinator`](../RareImagery/Auth/AuthCoordinator.swift) | Build authorize URL → `ASWebAuthenticationSession` → exchange code with `draftToken`/`draftUuid`/`deviceId` |
+| Token storage | [`KeychainStore`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Auth/KeychainStore.swift) | Access + refresh tokens in Keychain |
+| Proactive refresh | [`APIClient.ensureFreshAccessToken()`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Client/APIClient.swift) | **NEW:** refreshes 60s before expiry on every authenticated request |
+| Session invalidation | [`AuthEventHandlers`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Client/AuthEventHandlers.swift) | **NEW:** unrecoverable 401 → `handleSessionInvalidated()` → sign out |
+| JWT decode | [`JWTDecoder`](../Packages/RareImageryAPI/Sources/RareImageryAPI/Auth/JWTDecoder.swift) | Decode-only; camelCase claims (`storeUuid`); validates `aud` and `exp` |
+| Deep link | [`RareImageryApp`](../RareImagery/RareImageryApp.swift) | **Removed** duplicate `onOpenURL` OAuth handler — ASWebAuthenticationSession is sole path |
+| Foreground retry | `RareImageryApp.onChange(scenePhase)` | **NEW:** retries anonymous bootstrap if BFF was down at launch |
+| DEBUG skip | `AppState.debugSimulateSignIn()` | **NEW:** synthetic session on `SignInView` and `FunnelResultView` |
 | Sign-out | [`AppState.signOut()`](../RareImagery/State/AppState.swift) | Clears tokens, anonymous state, resets capture |
 
-### Bootstrap Resolution Order
+### Bootstrap Resolution Order (Updated)
 
 ```mermaid
 flowchart TD
     Launch[App launch] --> Prod{refreshToken exists?}
-    Prod -->|yes| Decode[Decode access JWT]
-    Decode -->|success| SignedIn[session.signedIn]
-    Decode -->|fail| AnonCheck
+    Prod -->|yes| Refresh{access expired or near expiry?}
+    Refresh -->|yes| DoRefresh[client.refreshTokens]
+    DoRefresh -->|success| SignedIn[session.signedIn via applyRefresh]
+    DoRefresh -->|fail| SignedOut[session.signedOut — never anonymous]
+    Refresh -->|no| Decode[Decode access JWT]
+    Decode -->|success| SignedIn
     Prod -->|no| AnonCheck{anonymous deviceId + valid token?}
     AnonCheck -->|yes| Anonymous[session.anonymous]
     AnonCheck -->|no| Mint[POST /api/mobile/auth/anonymous]
     Mint -->|success| Anonymous
-    Mint -->|fail| SignedOut[session.signedOut + error]
+    Mint -->|fail| SignedOut2[session.signedOut + error]
 ```
 
-### Findings (High Priority)
+### P0 Findings — All Resolved
 
-**1. No proactive token refresh**
+| Jul 5 finding | Status | Evidence |
+|---------------|--------|----------|
+| No proactive token refresh | **FIXED** | `ensureFreshAccessToken()` in `buildRequest` |
+| Bootstrap skips refresh on expired access | **FIXED** | `tryProductionSession()` calls `refreshTokens()` when `shouldRefresh()` |
+| 401 does not sign out globally | **FIXED** | `invokeSessionInvalidated()` via `AuthEventHandlers` |
+| Duplicate OAuth callback paths | **FIXED** | `onOpenURL` handler removed; coordinator threads draft params |
 
-`MobileClaims.shouldRefresh(within: 60)` exists and is documented per CLAUDE.md section 2.3, but is never called anywhere in the codebase:
+### Remaining Auth Gaps
 
-```48:52:Packages/RareImageryAPI/Sources/RareImageryAPI/Models/MobileClaims.swift
-    /// True when the token expires within the given window — caller should refresh.
-    /// Spec (CLAUDE.md §2.3): refresh 60 s before expiry.
-    public func shouldRefresh(within window: TimeInterval = 60) -> Bool {
-        expiresAt.timeIntervalSinceNow <= window
-    }
-```
-
-**2. Bootstrap skips refresh on expired access**
-
-`tryProductionSession()` checks for a refresh token and decodes the access JWT. If the access token is expired, `JWTDecoder.decode()` throws and the method falls through to anonymous bootstrap — it never attempts `APIClient.refreshTokens()` first:
-
-```98:109:RareImagery/State/AppState.swift
-    private func tryProductionSession() async -> Bool {
-        do {
-            if let refresh = try await keychain.get(.refreshToken), !refresh.isEmpty,
-               let access = try await keychain.get(.accessToken) {
-                let claims = try JWTDecoder.decode(access)
-                session.status = .signedIn(claims)
-                return true
-            }
-        } catch {
-            // fall through — production session unavailable, try anonymous
-        }
-        return false
-    }
-```
-
-**3. 401 does not sign out globally**
-
-`APIClient.send()` attempts one refresh on 401, then retries once. If refresh fails, it throws `APIError.unauthorized` but never notifies `AuthSession` to drop the session:
-
-```35:42:Packages/RareImageryAPI/Sources/RareImageryAPI/Client/APIClient.swift
-        if http.statusCode == 401 && endpoint.requiresAuth && retryOn401 {
-            logger.info("401 received — attempting token refresh and single retry")
-            do {
-                _ = try await refreshTokens()
-            } catch {
-                throw APIError.unauthorized
-            }
-            return try await send(endpoint, as: Response.self, retryOn401: false)
-        }
-```
-
-**4. Duplicate OAuth callback paths**
-
-`AuthCoordinator.signInWithX()` passes `draftToken`, `draftUuid`, and `deviceId` for funnel draft-claim handoff. The deep-link handler in `RareImageryApp` calls `completeXAuth(callbackURL:)` without those params — draft claims from the funnel would be lost if OAuth completes via deep link instead of `ASWebAuthenticationSession`.
-
-**5. Apple Sign-In not implemented**
-
-The BFF stub at `/api/mobile/auth/apple/callback` returns 501. The client has an error message mapping (`APPLE_AUTH_NOT_READY`) but no sign-in button or flow.
+- **Apple Sign-In** — BFF stub at `/api/mobile/auth/apple/callback` returns 501; no client button.
+- **`X_CLIENT_ID` configuration** — `AuthService` rejects placeholder values; real ID required in `Debug.local.xcconfig` for OAuth to work.
+- **JWT test drift** — `JWTDecoderTests.testDecodesValidToken` still uses snake_case fixture; fails after camelCase decode fix.
 
 ### What Works Well
 
-- PKCE S256 implementation with state validation and verifier cleanup in `defer`
-- Refresh coalescing via `refreshTask` in `APIClient` — concurrent callers share one in-flight refresh
-- Production vs anonymous discrimination via refresh token presence (clean signal, no JWT decode needed)
-- Draft claim handoff through OAuth callback when initiated from `FunnelResultView`
+- PKCE S256 with state validation and verifier cleanup in `defer`
+- Refresh coalescing via `refreshTask` in `APIClient`
+- Production vs anonymous discrimination via refresh token presence
+- Draft claim handoff: `draftToken`, `draftUuid`, `deviceId` through OAuth callback
+- Claimed draft uuid persisted to `.firstProductUuid` on successful OAuth
 - `APIError.userFacingMessage` implements mandated copy for `SLUG_TAKEN` and `RESERVED_SLUG`
+- Robust `presentationAnchor(for:)` using key UIWindow
 
 ---
 
@@ -236,129 +234,140 @@ The BFF stub at `/api/mobile/auth/apple/callback` returns 501. The client has an
 
 | Component | Path | Role |
 |-----------|------|------|
-| `APIConfiguration` | `Packages/.../Client/APIConfiguration.swift` | Reads `APIBaseURL`, `XClientID` from Info.plist |
-| `APIClient` | `Packages/.../Client/APIClient.swift` | Actor; URLSession; JSON decode; 401 → refresh → single retry |
+| `APIConfiguration` | `Packages/.../Client/APIConfiguration.swift` | Reads `APIBaseURL`, `XClientID`; `isXClientIDConfigured` rejects placeholders |
+| `APIClient` | `Packages/.../Client/APIClient.swift` | Actor; proactive refresh; 401 → refresh → single retry → invalidate |
+| `AuthEventHandlers` | `Packages/.../Client/AuthEventHandlers.swift` | **NEW** — callbacks for refresh and session invalidation |
 | `APIEndpoint` | `Packages/.../Client/APIEndpoint.swift` | Path/method/body builder |
-| `APIError` | `Packages/.../Client/APIError.swift` | Rich error mapping with user-facing messages |
+| `APIError` | `Packages/.../Client/APIError.swift` | Rich error mapping; improved localhost network messages |
 | `MultipartEncoder` | `Packages/.../Client/MultipartEncoder.swift` | Built but unused by any repository |
 
 ### Repository Inventory
 
 | Repository | Key Endpoints |
 |------------|---------------|
-| `AuthRepository` | `POST /api/mobile/auth/x/callback` |
+| `AuthRepository` | `POST /api/mobile/auth/x/callback` (with `draft_token`, `draft_uuid`, `device_id`) |
 | `AnonymousAuthRepository` | `POST /api/mobile/auth/anonymous` |
-| `ProductRepository` | `POST /api/vision/analyze`, `POST /api/v1/vision/value`, `POST /api/vision/merch-ideas`, product CRUD + publish |
+| `ProductRepository` | Vision endpoints, product CRUD + publish, **`GET /api/stores/products`** (new) |
 | `DesignGenerationRepository` | `POST /api/design-studio/generate`, poll task status |
 | `PublishProductRepository` | `POST /api/v1/design-studio/publish` |
 | `OnboardingRepository` | `POST /api/v1/creator/provision-store`, store update |
-| `CircleRepository` | `GET /api/social/circle/suggestions`, `GET/PUT /api/social/circle`, `GET /api/x/search-users` |
+| `CircleRepository` | Circle suggestions, pin management, X user search |
 | `CircleShareRepository` | `POST /api/v1/circle/share` |
-| `VideoUploadRepository` | `POST /api/mobile/upload-video` (commented as not live) |
+| `VideoUploadRepository` | `POST /api/mobile/upload-video` (stub behind `useMocks`) |
 
-Token refresh is handled inside `APIClient` at `POST /api/mobile/auth/refresh`, not a separate `TokenRefresher` type (README is stale on this point).
+Token refresh lives in `APIClient.refreshTokens()` at `POST /api/mobile/auth/refresh` (README's `TokenRefresher` reference is stale).
 
-### Vision Transport
+### New Models
 
-Vision endpoints use **JSON with base64 data URLs**, not multipart `/api/products/from-images`. This is explicitly documented in `ProductRepository.swift`. The `MultipartEncoder` exists but no repository calls it.
+| Model | Path | Purpose |
+|-------|------|---------|
+| `StoreProduct` | `Packages/.../Models/StoreProduct.swift` | List-row shape for Products tab |
+| `StoreProductsResponse` | same file | Wrapper for `GET /api/stores/products` |
 
 ### Contract Drift
 
 | Issue | Detail |
 |-------|--------|
 | README references `TokenRefresher` | Logic lives in `APIClient.refreshTokens()` |
-| CLAUDE.md publish-path guidance | Says mobile must not call design-studio publish; `PublishProductRepository` intentionally calls `/api/v1/design-studio/publish` for OnePageCreator Phase 4.4 — document the intentional exception |
+| CLAUDE.md publish-path guidance | `PublishProductRepository` intentionally calls `/api/v1/design-studio/publish` for OnePageCreator — document the exception |
 | `MultipartEncoder` unused | Vision uses JSON base64; multipart path from CLAUDE.md section 5 not adopted on iOS |
-| Slug check endpoint | `TweakSheetView` comments reference `/api/v1/stores/check-slug` with mobile Bearer auth working, but the client call is stubbed |
+| Slug check endpoint | `TweakSheetView.checkSlugRemote` still stubbed; legacy `OnboardingViewModel.live()` does hit real `/api/stores/check-slug` |
 
 ---
 
 ## 5. Feature and UX Review
 
-### User Flow Map
+### User Flow Map (Updated)
 
 ```mermaid
 flowchart TD
     Launch[bootstrap] --> SignedOut[SignInView]
     Launch --> Anonymous[Video Funnel]
-    Launch --> SignedIn[LivePreviewView]
-    Anonymous --> Tabs[MainTabView 5 tabs]
-    SignedIn --> OnePage[OnePageCreator]
-    SignedIn --> Tabs
-    Tabs --> Home[Home Create CTA]
+    Launch --> SignedIn[MainTabView]
+    Anonymous --> Claim{X OAuth claim}
+    Claim --> SignedIn
+    Anonymous --> Skip[Skip / Explore] --> Tabs
+    SignedIn --> Tabs[MainTabView 5 tabs]
+    Tabs --> Home[Home: video create primary]
+    Tabs --> Products[Server product list + edit]
     Tabs --> Circle[Discover Pin Favorites]
-    Tabs --> Creations[Local draft only]
-    Tabs --> Page[Coming soon placeholder]
+    Tabs --> Page[Store preview placeholder]
     Tabs --> Profile[Sign out]
+    Home --> VideoFunnel[VideoSubmissionFunnelView productMode]
+    Home --> Photos[FirstProductFlowView secondary]
+    Home --> Merch[OnePageCreator secondary]
+    Products --> Edit[ProductEditView PATCH + publish]
 ```
 
 ### Feature Status
 
 | Flow | Status | Key Files |
 |------|--------|-----------|
-| X OAuth sign-in | Implemented | `SignInView`, `AuthCoordinator` |
+| X OAuth sign-in | Implemented + hardened | `SignInView`, `AuthCoordinator`, `AuthEventHandlers` |
 | Anonymous video funnel | Implemented (live API) | `Funnel/*` |
-| Post-sign-in onboarding | Implemented | `LivePreviewView`, `TweakSheetView` |
-| OnePageCreator (primary create) | Implemented + publish wired | `OnePageCreator/*` |
-| Photo capture pipeline | Built, orphaned from nav | `Capture/*` — only reachable via legacy wizard |
+| Signed-in video create | **Implemented** | `HomeTabView` → `VideoSubmissionFunnelView(productMode: true)` |
+| Post-sign-in onboarding | **Removed** | `LivePreviewView` orphaned |
+| OnePageCreator (merch) | Secondary path | Home → "Design merch instead" |
+| Products tab (list + edit) | **Implemented** | `ProductsTabView`, `ProductEditView`, `ProductRepository.listMine()` |
+| Photo capture pipeline | Secondary path | Home → "Use photos instead" → `FirstProductFlowView` → `CaptureFlowView` |
 | QuickProduct sell form | UI only, create not wired | `QuickProductView` |
 | Circle social | Phase 1 complete | `Circle/*` |
-| Page editor tab | Placeholder | `MainTabView` PageTabView |
-| Creations tab | Local `CaptureSession` draft only | No server-backed list |
+| Page editor tab | Preview only | `PageTabView` + `LiveStorePreview`; editor stub |
 | Send to Circle | Implemented | `SendToCircleSheet` |
-| Store tweak (color/bio/slug) | Partial — slug check stubbed | `TweakSheetView` |
+| Store tweak (color/bio/slug) | Partial — slug check stubbed, view orphaned | `TweakSheetView` |
 
-### OnePageCreator (Primary Creation Path)
+### Products Tab (New Since Review)
 
-The current primary merch creation flow:
+Server-backed product management:
 
-1. Hero from X profile picture (`UserAsProductHero`) or optional burst-capture URLs
-2. Auto-fetch Grok merch ideas via `/api/vision/merch-ideas`
-3. User picks product kind chips, selects an idea, previews design generation
-4. "Create my shirt + launch store" calls `PublishProductRepository` (Phase 4.4 wired)
-5. Optional "Send to Circle" toggle opens `SendToCircleSheet`
-6. Anonymous users get 3 free idea calls, then `SignUpReminderBanner` + `SignInView` sheet
-
-Entry points: `LivePreviewView` primary CTA and `HomeTabView` Create button.
+1. `ProductsTabView` loads `productRepository.listMine()` on appear and pull-to-refresh
+2. Each row shows LIVE/DRAFT badge, title, description, price
+3. Tap row → `ProductEditView` loads full `ProductDetail`
+4. Edit title, description, price → PATCH → optional Publish
+5. Empty state directs user to Home Create
 
 ### Anonymous Video Funnel
 
 Value-first flow for users without an account:
 
-1. Instructions → record video (AVFoundation)
+1. Instructions → record video (AVFoundation; camera prepared on appear)
 2. On-device frame extraction + speech transcription
-3. `POST /api/v1/vision/value` for valuation
-4. Result screen with estimated value
-5. "Claim this draft" triggers X OAuth with pending draft token/UUID
+3. `POST /api/v1/vision/value` for valuation (live when `useMocks == false`)
+4. Result screen with estimated value and error display
+5. "Claim this draft" triggers X OAuth with `draftToken`/`draftUuid`/`deviceId`
+6. DEBUG: "Skip sign-in (testing)" bypasses OAuth
 
-"Skip for now" sets `hasSeenFunnel = true` and lands in `MainTabView`.
+"Explore the app" sets `hasSeenFunnel = true` and lands in `MainTabView`.
+
+### Signed-In Funnel (`productMode: true`)
+
+When launched from Home Create:
+
+- Valuation call binds draft to authenticated creator
+- CTA shows **"Add to store"** instead of OAuth claim
+- On success, product appears in Products tab after server list refresh
 
 ### Incomplete and Stub Screens
 
 | Item | Location | Status |
 |------|----------|--------|
-| Page editor | `MainTabView` PageTabView | "Full page editor coming soon" placeholder |
-| QuickProduct create | `QuickProductView` | Button logs/dismisses; endpoint not wired |
-| CaptureResultView | `Capture/CaptureResultView.swift` | Built; not referenced (CaptureFlowView uses inline preview) |
-| FirstProductFlowView | `Onboarding/FirstProduct/` | Superseded by OnePageCreator; unreachable |
-| WelcomeView / PermissionsView | `Onboarding/` | Built; not in ContentView router |
-| Printful templates | `FirstProductCaptureView` | "Coming soon" copy |
-| TweakSheet slug check | `TweakSheetView` | `checkSlugRemote` always returns true |
-| Funnel signed-in sell CTA | `FunnelResultView` | Empty branch when already signed in (Phase 5 stub) |
+| Page editor | `MainTabView` PageTabView | `LiveStorePreview` only; full editor stub |
+| QuickProduct create | `QuickProductView` | Button sleeps and dismisses; endpoint not wired |
+| TweakSheet slug check | `TweakSheetView` | `checkSlugRemote` always returns true; view orphaned |
+| LivePreviewView | `Onboarding/LivePreviewView.swift` | Removed from router; file remains |
+| Funnel signed-in (non-productMode) | `FunnelResultView` | Empty Phase 5 stub branch |
 | Apple Sign-In | — | No UI button |
-| Bio from server | `LivePreviewView` | Empty placeholder; no `/api/me` fetch |
+| Bio from server | `PageTabView` | Empty placeholder; no `/api/me` fetch |
 
 ### UX Observations
 
-**Design token drift.** Onboarding screens use local orange `onboardingCTA` (`#FF6B00`) while the refreshed global `AppColor.cta` is gold (`#D4AF37`). Funnel and OnePageCreator consistently use the gold palette.
+**Design system refresh.** Global palette now uses vault purple (`#7B2D8E`) and gold (`#D4AF37`) per commit `16a335c`. Some legacy onboarding screens may still use local orange accents.
 
-**Error handling inconsistency.** Three or more visual patterns coexist: red caption text (auth, QuickProduct), orange caption text (OnePageCreator), `ErrorBanner` with retry (Circle), and inline overlays (capture). No global error toast or modifier.
+**Error handling inconsistency.** Three or more visual patterns coexist: red caption (auth, funnel), orange caption (OnePageCreator), `ErrorBanner` (Circle). Funnel result screen now shows auth errors inline (improvement since review).
 
-**Accessibility gaps.** Approximately 13 files contain explicit `accessibilityLabel` annotations (~15 call sites). Missing broadly: Dynamic Type / `@ScaledMetric`, Reduce Motion support for funnel animations, tab bar labels, filmstrip thumbnails, and most form fields.
+**Accessibility gaps.** ~13 files with explicit `accessibilityLabel`; Home Create button has one. Missing broadly: Dynamic Type, Reduce Motion, tab bar labels.
 
-**Intentional mixed theme.** `SendToCircleSheet` uses light system colors inside the dark-mode app — appears deliberate for the share sheet context.
-
-**Typography fallback.** Custom font families (Space Grotesk, Hanken Grotesk, JetBrains Mono) are referenced in `Typography.swift` but may fall back to system fonts if TTFs are not bundled.
+**Camera UX.** `CameraPicker` exists; auto-open on capture was attempted then removed due to fullScreenCover-from-sheet deadlock. Manual camera button in `CaptureView` empty state.
 
 ---
 
@@ -366,14 +375,17 @@ Value-first flow for users without an account:
 
 ### Current Coverage
 
-**29 unit tests** across two targets:
+**35 unit tests** across two targets (17 SPM + 18 app; **1 SPM failure**):
 
 | Suite | Path | Tests | Coverage |
 |-------|------|-------|----------|
-| `PKCETests` | `Packages/.../Tests/PKCETests.swift` | 4 | PKCE verifier/challenge generation |
-| `JWTDecoderTests` | `Packages/.../Tests/JWTDecoderTests.swift` | 4 | JWT decode, audience, expiry |
-| `MobileErrorResponseTests` | `Packages/.../Tests/MobileErrorResponseTests.swift` | 4 | Error envelope parsing |
-| `FunnelValuationTests` | `RareImageryTests/FunnelValuationTests.swift` | 17 | Price band and insights mapping |
+| `PKCETests` | SPM | 4 | PKCE verifier/challenge generation |
+| `JWTDecoderTests` | SPM | 4 | JWT decode — **1 failing** (`storeUuid` camelCase drift) |
+| `MobileErrorResponseTests` | SPM | 4 | Error envelope parsing |
+| `MobileClaimsTests` | SPM | 2 | **NEW** — `shouldRefresh` window |
+| `APIClientAuthTests` | SPM | 3 | **NEW** — proactive refresh, 401 invalidation, `onTokensRefreshed` |
+| `FunnelValuationTests` | App | 17 | Price band and insights mapping |
+| `AuthSessionRefreshTests` | App | 1 | **NEW** — `applyRefresh` preserves flags |
 
 Run SPM tests:
 
@@ -383,10 +395,10 @@ swift test --package-path Packages/RareImageryAPI
 
 ### Gaps
 
-- No `APIClient` integration tests (401 retry, refresh coalescing, token persistence)
-- No `AuthService` or OAuth flow tests
-- No ViewModel tests (`OnePageCreatorViewModel`, `CaptureCoordinator`, `FunnelViewModel`)
-- No UI or snapshot tests (README Phase D mentions these — not started)
+- Fix `JWTDecoderTests` fixture for camelCase claims
+- No ViewModel tests (`OnePageCreatorViewModel`, `FunnelViewModel`)
+- No UI or snapshot tests
+- No `ProductRepository.listMine` or `ProductEditView` tests
 - App-target and SPM tests run via separate schemes; no unified CI test target
 
 ---
@@ -399,7 +411,8 @@ swift test --package-path Packages/RareImageryAPI
 |------|---------|
 | [`Configuration/Debug.xcconfig`](../Configuration/Debug.xcconfig) | `API_BASE_URL = http://localhost:3000`, `X_CLIENT_ID` placeholder |
 | [`Configuration/Release.xcconfig`](../Configuration/Release.xcconfig) | Production URL + client ID |
-| `Configuration/Debug.local.xcconfig` | Gitignored secrets (example template provided) |
+| `Configuration/Debug.local.xcconfig` | Gitignored — real `X_CLIENT_ID` required for OAuth |
+| `Configuration/Release.local.xcconfig` | Gitignored — used by Xcode Cloud via `ci_post_clone.sh` |
 
 ### App Identity
 
@@ -414,48 +427,51 @@ swift test --package-path Packages/RareImageryAPI
 
 ### Build Tooling
 
-- **XcodeGen** via [`project.yml`](../project.yml) — rerun `xcodegen generate` when adding/removing Swift files
+- **XcodeGen** via [`project.yml`](../project.yml) — includes `UIAppFonts` for bundled typefaces
 - Two schemes: `RareImagery` and `RareImageryStudio` (Xcode Cloud alias)
-- Privacy strings configured for camera, microphone, speech recognition, and photo library
+- [`ci_scripts/ci_post_clone.sh`](../ci_scripts/ci_post_clone.sh) — writes `Release.local.xcconfig` from `X_CLIENT_ID` env var
+- [`docs/TESTFLIGHT.md`](TESTFLIGHT.md) — Xcode Cloud + manual Archive guide
 
 ### Documentation Drift
 
-[`README.md`](../README.md) phases section still says "Phase A — Auth + skeleton (in progress)" and references `TokenRefresher`. The codebase has implemented Phases B–D features (capture, draft review, OnePageCreator publish, Circle, funnel). README should be updated to reflect current state.
+[`README.md`](../README.md) phases section still says "Phase A — Auth + skeleton (in progress)" and references `TokenRefresher`. The codebase has implemented auth hardening, video funnel, Products tab, and Circle. README should be updated to reflect current state.
 
 ---
 
 ## 8. Prioritized Recommendations
 
-### P0 — Ship Blockers
+### P0 — Ship Blockers (Jul 5) — All Done
 
-| Item | Action | Files |
-|------|--------|-------|
-| Proactive token refresh | Call `shouldRefresh(within: 60)` before authenticated requests; refresh if true | `APIClient`, `AppState` |
-| Bootstrap refresh | On expired access + valid refresh, call `refreshTokens()` before falling through to anonymous | `AppState.tryProductionSession()` |
-| Global session drop | On unrecoverable 401 after refresh failure, call `session.setSignedOut()` | `APIClient` + callback to `AppState` |
-| Deep-link OAuth parity | Pass `draftToken`/`draftUuid`/`deviceId` in `RareImageryApp.onOpenURL` handler | `RareImageryApp.swift` |
+| Item | Status |
+|------|--------|
+| Proactive token refresh | **Done** — `APIClient.ensureFreshAccessToken()` |
+| Bootstrap refresh | **Done** — `tryProductionSession()` |
+| Global session drop | **Done** — `AuthEventHandlers.onSessionInvalidated` |
+| Deep-link OAuth parity | **Done** — duplicate handler removed; coordinator owns flow |
 
 ### P1 — Feature Completion
 
-| Item | Action | Files |
-|------|--------|-------|
-| QuickProduct create | Wire `ProductRepository.create(...)` in sell button handler | `QuickProductView.swift` |
-| Slug pre-check | Implement `checkSlugRemote` against BFF (mobile Bearer auth confirmed working) | `TweakSheetView.swift` |
-| Funnel signed-in adoption | Implement Phase 5 "adopt valuation" branch for signed-in users | `FunnelResultView.swift` |
-| Server-backed creations | Add product list endpoint consumption for Creations tab | `MainTabView.swift`, new repository method |
-| Capture pipeline routing | Either wire capture into Home/Creations tab or remove orphaned code | `Capture/*`, `MainTabView.swift` |
+| Item | Status | Action |
+|------|--------|--------|
+| Server-backed Products tab | **Done** | — |
+| Signed-in video create | **Done** | — |
+| QuickProduct create | **Gap** | Wire `ProductRepository.create(...)` or remove |
+| Slug pre-check | **Gap** | Implement `checkSlugRemote` or remove `TweakSheetView` |
+| Funnel signed-in adoption | **Partial** | `productMode` done; generic branch still empty |
+| Capture pipeline routing | **Partial** | Secondary photo path wired; primary is video funnel |
+| Fix JWTDecoderTests | **Gap** | Update test token to camelCase `storeUuid` |
 
 ### P2 — Quality and Maintenance
 
-| Item | Action |
+| Item | Status |
 |------|--------|
-| Legacy screen cleanup | Delete or route `FirstProductFlowView`, `WelcomeView`, `PermissionsView`, `CaptureResultView` |
-| Error UX unification | Adopt `ErrorBanner` or a shared error modifier app-wide |
-| Design token alignment | Replace onboarding orange `onboardingCTA` with `AppColor.cta` gold |
-| Test expansion | APIClient refresh/retry, AuthService, ViewModel state machines, snapshot tests |
-| README sync | Update phase status, remove `TokenRefresher` reference, document current flows |
-| Accessibility pass | Dynamic Type, Reduce Motion, systematic labels on interactive elements |
-| Swift 6 readiness | Review `Analytics` `nonisolated(unsafe)` usage |
+| Legacy screen cleanup | **Gap** — LivePreview, Welcome, Permissions, TweakSheet orphaned |
+| Error UX unification | **Gap** |
+| README sync | **Gap** |
+| Test expansion | **Partial** — +6 auth tests; fix 1 failure; add ViewModel/UI tests |
+| Accessibility pass | **Gap** |
+| Swift 6 readiness | **Gap** — review `Analytics` `nonisolated(unsafe)` |
+| Apple Sign-In / Push | **Gap** |
 
 ---
 
@@ -466,45 +482,59 @@ swift test --package-path Packages/RareImageryAPI
 ```
 RareImagery/                          Packages/RareImageryAPI/
 ├── Auth/          Sign-in, OAuth       ├── Auth/         PKCE, Keychain, JWT, AuthService
-├── Capture/       Photo + analyze      ├── Client/       APIClient, APIError, endpoints
-├── Circle/        Social features      ├── Models/       18 model files
+├── Capture/       Photo + CameraPicker ├── Client/       APIClient, AuthEventHandlers, APIError
+├── Circle/        Social features      ├── Models/       19 model files (+StoreProduct)
 ├── Components/    Shared UI            ├── Repositories/ 9 repository actors
 ├── Funnel/        Video valuation      └── Analytics/    Telemetry dispatch
-├── Onboarding/    Welcome + tweak
-├── OnePageCreator/  Primary create
-├── Product/       Quick sell form
+├── Fonts/         Bundled TTFs (NEW)
+├── Onboarding/    Legacy + orphaned LivePreview/TweakSheet
+├── OnePageCreator/  Merch create (secondary)
+├── Product/       QuickProduct + ProductEditView (NEW)
 ├── State/         AppState, sessions
-├── Tabs/          5-tab shell
+├── Tabs/          5-tab shell (Products tab)
 └── Theme/         Colors, Typography
 ```
+
+### New Files Since July 5
+
+| File | Purpose |
+|------|---------|
+| `Packages/.../Client/AuthEventHandlers.swift` | Auth callback bridge |
+| `Packages/.../Models/StoreProduct.swift` | Products list model |
+| `Packages/.../Tests/APIClientAuthTests.swift` | Auth client tests |
+| `Packages/.../Tests/MobileClaimsTests.swift` | Claims refresh window tests |
+| `RareImagery/Capture/CameraPicker.swift` | Native camera picker |
+| `RareImagery/Product/ProductEditView.swift` | Edit + publish UI |
+| `RareImagery/Fonts/*` | Bundled brand typefaces |
+| `RareImageryTests/AuthSessionRefreshTests.swift` | applyRefresh test |
+| `docs/TESTFLIGHT.md` | TestFlight shipping guide |
 
 ### Related Documentation
 
 | Document | Purpose |
 |----------|---------|
 | [`CLAUDE.md`](../CLAUDE.md) | BFF contract briefing (authoritative for server API) |
-| [`README.md`](../README.md) | Build instructions (partially stale) |
+| [`README.md`](../README.md) | Build instructions (**partially stale**) |
+| [`docs/TESTFLIGHT.md`](TESTFLIGHT.md) | Xcode Cloud + manual Archive (**new**) |
 | [`docs/PHASE_1_COMPLETE.md`](PHASE_1_COMPLETE.md) | Circle Phase 1 completion record |
 | [`docs/CIRCLE_SHARE_HANDOFF.md`](CIRCLE_SHARE_HANDOFF.md) | Circle share feature handoff |
 | [`VALUE-FIRST-OAUTH.md`](../VALUE-FIRST-OAUTH.md) | Anonymous trial + draft claim spec |
-| [`XTOOLS-APPFLOW.md`](../XTOOLS-APPFLOW.md) | App flow reference |
-| [`Plans/Phase-3-Video-Voice-Capture-Plan.md`](../Plans/Phase-3-Video-Voice-Capture-Plan.md) | Video capture phase plan |
+| [`XTOOLS-APPFLOW.md`](../XTOOLS-APPFLOW.md) | App flow reference (**partially stale** on `useMocks`) |
 
 ### Anti-Patterns Compliance (from CLAUDE.md)
 
 | Rule | Status |
 |------|--------|
-| No direct X API calls from Swift | Compliant — OAuth via BFF callback |
-| No Drupal writes from client | Compliant — all writes through BFF |
-| No JWT signing on device | Compliant — decode-only |
-| No client-side LLM calls | Compliant — vision via BFF |
+| No direct X API calls from Swift | Compliant |
+| No Drupal writes from client | Compliant |
+| No JWT signing on device | Compliant |
+| No client-side LLM calls | Compliant |
 | Refresh tokens only in Keychain | Compliant |
-| No `x_user_profile` bundle targeting | N/A (client-side) |
-| No hardcoded `rareimagery.net` URLs | Compliant — uses `APIConfiguration.baseURL` |
-| No Combine | Compliant — async/await only |
-| No third-party reactive libs | Compliant — `@Observable` only |
-| No design-studio publish from mobile | **Exception** — `PublishProductRepository` calls `/api/v1/design-studio/publish` intentionally for OnePageCreator Phase 4.4; CLAUDE.md should be updated to document this mobile path |
+| No hardcoded `rareimagery.net` URLs | Compliant |
+| No Combine | Compliant |
+| No third-party reactive libs | Compliant |
+| No design-studio publish from mobile | **Exception** — `PublishProductRepository` for OnePageCreator Phase 4.4 |
 
 ---
 
-*End of review. For questions about BFF contracts, see [`CLAUDE.md`](../CLAUDE.md). For build instructions, see [`README.md`](../README.md).*
+*End of review (updated 2026-07-06). Prior version: 2026-07-05 on same branch at `2790544`. For BFF contracts see [`CLAUDE.md`](../CLAUDE.md). For TestFlight see [`TESTFLIGHT.md`](TESTFLIGHT.md).*
