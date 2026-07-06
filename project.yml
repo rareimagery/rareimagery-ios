@@ -92,6 +92,17 @@ targets:
         APIBaseURL: $(API_BASE_URL)
         XClientID: $(X_CLIENT_ID)
         Environment: $(ENVIRONMENT)
+        UIAppFonts:
+          - SpaceGrotesk-Regular.ttf
+          - SpaceGrotesk-Medium.ttf
+          - SpaceGrotesk-Bold.ttf
+          - HankenGrotesk-Regular.ttf
+          - HankenGrotesk-Medium.ttf
+          - HankenGrotesk-SemiBold.ttf
+          - HankenGrotesk-Bold.ttf
+          - JetBrainsMono-Regular.ttf
+          - JetBrainsMono-Medium.ttf
+          - JetBrainsMono-Bold.ttf
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rareimagery.studio

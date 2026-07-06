@@ -13,8 +13,8 @@ enum AppColor {
     /// #D4AF37 — brand gold (new)
     static let gold = Color(red: 212/255, green: 175/255, blue: 55/255)
     static let goldSoft = Color(red: 212/255, green: 175/255, blue: 55/255).opacity(0.16)
-    /// #B8932B — deeper gold for text-on-light
-    static let gold700 = Color(red: 184/255, green: 147/255, blue: 43/255)
+    /// #B8942A — deeper gold (design-system token gold-600) for text-on-light
+    static let gold700 = Color(red: 184/255, green: 148/255, blue: 42/255)
     static let brandSoft = Color(red: 123/255, green: 45/255, blue: 142/255).opacity(0.16)
 
     // MARK: Vault gradient stops (#561F62 → #2C1033 → #160D1A)
@@ -22,17 +22,18 @@ enum AppColor {
     static let vaultMid = Color(red: 44/255, green: 16/255, blue: 51/255)
     static let vaultBottom = Color(red: 22/255, green: 13/255, blue: 26/255)
 
-    // MARK: Surfaces
-    /// #0a0a0a — base background
-    static let background = Color(red: 10/255, green: 10/255, blue: 10/255)
-    /// #171717 — elevated surfaces (cards, inputs)
-    static let surface = Color(red: 23/255, green: 23/255, blue: 23/255)
-    /// #1a1a1a — nested chips/search
-    static let surfaceSecondary = Color(red: 26/255, green: 26/255, blue: 26/255)
+    // MARK: Surfaces — violet-tinted inks per the vault theme tokens
+    /// #100912 — base background (token ink-950 / vault --bg)
+    static let background = Color(red: 16/255, green: 9/255, blue: 18/255)
+    /// #1E1322 — elevated surfaces, cards, inputs (token ink-850 / vault --surface-raised)
+    static let surface = Color(red: 30/255, green: 19/255, blue: 34/255)
+    /// #261A2B — nested chips/search (token ink-800)
+    static let surfaceSecondary = Color(red: 38/255, green: 26/255, blue: 43/255)
 
     // MARK: Text
     static let textPrimary = Color.white
-    static let textSecondary = Color(red: 0.65, green: 0.65, blue: 0.7)
+    /// #B6A8C0 — violet-tinted muted text (vault --text-muted)
+    static let textSecondary = Color(red: 182/255, green: 168/255, blue: 192/255)
 
     // MARK: Borders
     static let border = Color.white.opacity(0.08)

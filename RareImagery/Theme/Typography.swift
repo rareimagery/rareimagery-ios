@@ -3,16 +3,15 @@ import SwiftUI
 /// RareImagery type system — app-wide refresh (2026-06-25).
 /// Display = Space Grotesk · Body = Hanken Grotesk · Mono = JetBrains Mono.
 ///
-/// `Font.custom(family, size:)` falls back to the system font when the family
-/// isn't registered, so this is safe to ship before the TTFs are bundled
-/// (Phase 1b: add the OFL TTFs + `UIAppFonts`). Once bundled, `.weight(_)`
-/// selects the matching face. Existing `AppFont.*` names are preserved so all
-/// call-sites keep working.
+/// The OFL TTFs are bundled (RareImagery/Fonts + UIAppFonts in project.yml)
+/// as of 2026-07-06; `.weight(_)` selects the matching static face. The family
+/// strings must be the fonts' real family names (with spaces) — the earlier
+/// no-space names never matched, so everything silently fell back to system.
 enum AppFont {
-    // Families (registered names). System fallback until TTFs are added.
-    private static let displayFamily = "SpaceGrotesk"
-    private static let bodyFamily = "HankenGrotesk"
-    private static let monoFamily = "JetBrainsMono"
+    // Registered family names (from the TTFs' name tables).
+    private static let displayFamily = "Space Grotesk"
+    private static let bodyFamily = "Hanken Grotesk"
+    private static let monoFamily = "JetBrains Mono"
 
     static func display(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
         .custom(displayFamily, size: size).weight(weight)

@@ -54,6 +54,19 @@
 	<string>RareImagery uses photos you pick from your library to create product listings.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>RareImagery transcribes your spoken product details on-device so Grok can value your item. Your audio stays on your phone.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>SpaceGrotesk-Regular.ttf</string>
+		<string>SpaceGrotesk-Medium.ttf</string>
+		<string>SpaceGrotesk-Bold.ttf</string>
+		<string>HankenGrotesk-Regular.ttf</string>
+		<string>HankenGrotesk-Medium.ttf</string>
+		<string>HankenGrotesk-SemiBold.ttf</string>
+		<string>HankenGrotesk-Bold.ttf</string>
+		<string>JetBrainsMono-Regular.ttf</string>
+		<string>JetBrainsMono-Medium.ttf</string>
+		<string>JetBrainsMono-Bold.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
