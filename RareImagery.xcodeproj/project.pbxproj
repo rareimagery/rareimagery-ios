@@ -45,6 +45,8 @@
 		73AE674AC5936CADBCC1BA6D /* FirstProductCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FFD1AFD9ACB977F4CA1599A /* FirstProductCaptureView.swift */; };
 		75275A24CCC543C975D635A5 /* SendToCircleSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7745D534331234989F3442C /* SendToCircleSheet.swift */; };
 		756C9E188B42F8537139710C /* SpaceGrotesk-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B880D0340C2C0456856E12A4 /* SpaceGrotesk-Bold.ttf */; };
+		7755B283947141FA0F120CBB /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EB854C6069A6E72B48C8E9 /* CameraPicker.swift */; };
+		79D1CD50B226183CEE51CEBA /* LICENSES.md in Resources */ = {isa = PBXBuildFile; fileRef = C7F63EC400E27473735A22A5 /* LICENSES.md */; };
 		89D805FB2245C5EE6C4A55A2 /* CircleMemberRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6C5211852FA9E2644EDE472 /* CircleMemberRow.swift */; };
 		8C0F556E34A151C9D949B61C /* MyCircleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD0A7CCC37729FBE1616AF44 /* MyCircleView.swift */; };
 		8F090E20C4873D6031008678 /* CreateAndLaunchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E3DD4DC00F0F0A88968F803 /* CreateAndLaunchButton.swift */; };
@@ -146,12 +148,14 @@
 		ACDEF011E42BC89A2AEE3A2F /* AuthCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthCoordinator.swift; sourceTree = "<group>"; };
 		AD55A9953FCA9DC2CFDCF04D /* JetBrainsMono-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "JetBrainsMono-Bold.ttf"; sourceTree = "<group>"; };
 		B1001196AB02F77E8D882CA0 /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
+		B3EB854C6069A6E72B48C8E9 /* CameraPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPicker.swift; sourceTree = "<group>"; };
 		B405CED2BDDEFAFE0140472B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B4DBB39E220862E500A9BAF2 /* JetBrainsMono-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "JetBrainsMono-Regular.ttf"; sourceTree = "<group>"; };
 		B880D0340C2C0456856E12A4 /* SpaceGrotesk-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Bold.ttf"; sourceTree = "<group>"; };
 		BB7C589A72AB8E84699F5092 /* ImageCompression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompression.swift; sourceTree = "<group>"; };
 		BC740D732D449C8F368EA70E /* HankenGrotesk-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "HankenGrotesk-SemiBold.ttf"; sourceTree = "<group>"; };
 		C3C1E9524FBBA9ADDAB01894 /* AuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSession.swift; sourceTree = "<group>"; };
+		C7F63EC400E27473735A22A5 /* LICENSES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = LICENSES.md; sourceTree = "<group>"; };
 		CAA6D9D045D368FC6EAE3A04 /* FunnelProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunnelProcessingView.swift; sourceTree = "<group>"; };
 		CB6EC47B234B015E81722BCF /* CircleModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CircleModels.swift; sourceTree = "<group>"; };
 		CD0A7CCC37729FBE1616AF44 /* MyCircleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyCircleView.swift; sourceTree = "<group>"; };
@@ -194,6 +198,7 @@
 		2168B151DE790CF23B027AD5 /* Capture */ = {
 			isa = PBXGroup;
 			children = (
+				B3EB854C6069A6E72B48C8E9 /* CameraPicker.swift */,
 				6A5C9E47A9BA61B3EB253B9A /* CaptureFlowView.swift */,
 				A5C0B96D20614F7078C45F10 /* CaptureResultView.swift */,
 				EDCD1B9443C189BC2396C17B /* CaptureView.swift */,
@@ -336,6 +341,7 @@
 				AD55A9953FCA9DC2CFDCF04D /* JetBrainsMono-Bold.ttf */,
 				8D8DC10CCF307EE26681A362 /* JetBrainsMono-Medium.ttf */,
 				B4DBB39E220862E500A9BAF2 /* JetBrainsMono-Regular.ttf */,
+				C7F63EC400E27473735A22A5 /* LICENSES.md */,
 				B880D0340C2C0456856E12A4 /* SpaceGrotesk-Bold.ttf */,
 				59D46B5FD96DC41F5FC8C8F9 /* SpaceGrotesk-Medium.ttf */,
 				243151C6232E4A659BE9C9F6 /* SpaceGrotesk-Regular.ttf */,
@@ -574,6 +580,7 @@
 				5738EF117451021D84DF0D87 /* JetBrainsMono-Bold.ttf in Resources */,
 				5DC3E570DDB279ECDB721B82 /* JetBrainsMono-Medium.ttf in Resources */,
 				E637E5ABE3AE1E1B2B103E13 /* JetBrainsMono-Regular.ttf in Resources */,
+				79D1CD50B226183CEE51CEBA /* LICENSES.md in Resources */,
 				756C9E188B42F8537139710C /* SpaceGrotesk-Bold.ttf in Resources */,
 				9AE9C4508BF72AA323E3B876 /* SpaceGrotesk-Medium.ttf in Resources */,
 				94CBE3F547DF5D0DE40D4490 /* SpaceGrotesk-Regular.ttf in Resources */,
@@ -591,6 +598,7 @@
 				BA550E671858740D907E4D04 /* AtCapWarningCard.swift in Sources */,
 				E71D3C94F745511E66F61C59 /* AuthCoordinator.swift in Sources */,
 				C85CD70BCEA109C57E041C82 /* AuthSession.swift in Sources */,
+				7755B283947141FA0F120CBB /* CameraPicker.swift in Sources */,
 				265E971426A41E66373064C7 /* CaptureFlowView.swift in Sources */,
 				0C839E041DA00AFA2DA15730 /* CaptureResultView.swift in Sources */,
 				2567F2CF73C963B81C000EA2 /* CaptureSession.swift in Sources */,

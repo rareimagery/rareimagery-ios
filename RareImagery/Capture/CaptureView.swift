@@ -6,6 +6,8 @@ struct CaptureView: View {
     @Environment(AppState.self) private var state
     @Environment(CaptureSession.self) private var capture
     @State private var pickerItems: [PhotosPickerItem] = []
+    @State private var showCamera = false
+    @State private var didAutoOpenCamera = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -35,6 +37,24 @@ struct CaptureView: View {
         .onChange(of: pickerItems) { _, newItems in
             Task { await ingest(newItems) }
         }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPicker { jpeg in
+                if let compressed = ImageCompression.compressForUpload(data: jpeg) {
+                    capture.addShot(jpegData: compressed)
+                }
+            }
+            .ignoresSafeArea()
+        }
+        .task {
+            // "Take a photo of your product" should open the live camera
+            // directly, not a picker screen. Auto-present it once on first
+            // entry with no shots; if the user cancels they land on the
+            // empty state with explicit Camera / Library choices.
+            if capture.shots.isEmpty, CameraPicker.isAvailable, !didAutoOpenCamera {
+                didAutoOpenCamera = true
+                showCamera = true
+            }
+        }
     }
 
     private var header: some View {
@@ -43,6 +63,19 @@ struct CaptureView: View {
                 .font(AppFont.title)
                 .foregroundStyle(AppColor.textPrimary)
             Spacer()
+            if CameraPicker.isAvailable {
+                Button {
+                    showCamera = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "camera.fill")
+                        Text("Camera")
+                    }
+                    .font(AppFont.callout)
+                    .foregroundStyle(AppColor.accent)
+                }
+                .disabled(!capture.canAddMore)
+            }
             PhotosPicker(
                 selection: $pickerItems,
                 maxSelectionCount: CaptureSession.maxShots,
@@ -50,8 +83,8 @@ struct CaptureView: View {
                 photoLibrary: .shared()
             ) {
                 HStack(spacing: 6) {
-                    Image(systemName: "plus.circle.fill")
-                    Text(capture.shots.isEmpty ? "Add photos" : "Add more")
+                    Image(systemName: "photo.on.rectangle")
+                    Text(capture.shots.isEmpty ? "Library" : "Add more")
                 }
                 .font(AppFont.callout)
                 .foregroundStyle(AppColor.accent)
@@ -64,15 +97,43 @@ struct CaptureView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Spacer()
-            Image(systemName: "photo.on.rectangle.angled")
+            Image(systemName: "camera.viewfinder")
                 .font(.system(size: 56))
                 .foregroundStyle(AppColor.textSecondary)
-            Text("Pick up to 5 photos")
+            Text("Photograph your item")
                 .font(AppFont.headline)
                 .foregroundStyle(AppColor.textPrimary)
-            Text("Tap a photo to mark it as the main image.")
+            Text("Up to 5 shots — tap one to mark it as the main image.")
                 .font(AppFont.callout)
                 .foregroundStyle(AppColor.textSecondary)
+
+            if CameraPicker.isAvailable {
+                Button {
+                    showCamera = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "camera.fill")
+                        Text("Take a photo")
+                    }
+                    .font(AppFont.buttonLabel)
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 28)
+                    .padding(.vertical, 14)
+                    .background(AppColor.cta, in: Capsule())
+                }
+                .padding(.top, 10)
+            }
+
+            PhotosPicker(
+                selection: $pickerItems,
+                maxSelectionCount: CaptureSession.maxShots,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                Text("Choose from library")
+                    .font(AppFont.bodyText(14))
+                    .foregroundStyle(AppColor.textSecondary)
+            }
             Spacer()
         }
     }
