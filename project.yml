@@ -26,7 +26,8 @@ settings:
 # whereas an undefined scheme is only created per-user on Xcode open.
 # Two names, one app target: the Xcode Cloud workflow invokes
 # `-scheme RareImageryStudio`; local dev + docs use `-scheme RareImagery`.
-# Both build the RareImagery target. Keep both until the workflow is repointed.
+# Both build the RareImagery target and share the RareImageryTests test
+# action. Keep both scheme names until the workflow is repointed.
 schemes:
   RareImagery: &appScheme
     build:
@@ -34,6 +35,10 @@ schemes:
         RareImagery: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - RareImageryTests
     profile:
       config: Release
     analyze:
@@ -73,6 +78,7 @@ targets:
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: "RareImagery uses the camera to capture photos of items you want to sell."
         NSMicrophoneUsageDescription: "RareImagery records voice notes you add to product listings."
+        NSSpeechRecognitionUsageDescription: "RareImagery transcribes your spoken product details on-device so Grok can value your item. Your audio stays on your phone."
         NSPhotoLibraryUsageDescription: "RareImagery uses photos you pick from your library to create product listings."
         NSPhotoLibraryAddUsageDescription: "RareImagery saves processed product photos back to your library."
         CFBundleURLTypes:
@@ -89,3 +95,16 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ENABLE_PREVIEWS: YES
         SWIFT_OBJC_BRIDGING_HEADER: ""
+
+  RareImageryTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: RareImageryTests
+    dependencies:
+      - target: RareImagery
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rareimagery.studio.tests
+        GENERATE_INFOPLIST_FILE: YES

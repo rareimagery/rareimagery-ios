@@ -12,9 +12,8 @@ import RareImageryAPI
 ///      the live-preview screen yet) → LivePreviewView (the "You're live"
 ///      screen — the new onboarding pattern per the 2026-05-23 redesign).
 ///
-///   3. RETURNING user (or anyone who's tapped "Create first product" /
-///      "Just explore" on the LivePreviewView) → CaptureFlowView (the main
-///      app entry).
+///   3. RETURNING user (or anyone who's finished OnePageCreator /
+///      tapped "Just explore" on LivePreviewView) → MainTabView.
 ///
 /// The transition from state #2 → #3 is local-only: a flag on AuthSession
 /// flips once the user dismisses the LivePreviewView. No round-trip to
@@ -46,10 +45,17 @@ struct ContentView: View {
                 // user sees. Three actions decide what comes next.
                 LivePreviewView(onAction: handleLivePreviewAction)
             } else {
-                NavigationStack {
-                    CaptureFlowView()
-                }
-                .tint(AppColor.accent)
+                MainTabView()
+            }
+
+        case .anonymous:
+            // Value-first video funnel on first launch; skip lands in MainTabView.
+            // Trial-exhausted users go straight to the shell (per-screen gating).
+            // Burst-capture / OnePageCreator wiring remains separate (XTOOLS §6).
+            if !state.session.hasSeenFunnel, !state.session.trialExhausted {
+                VideoSubmissionFunnelView(onExit: { state.session.hasSeenFunnel = true })
+            } else {
+                MainTabView()
             }
         }
     }
@@ -59,20 +65,8 @@ struct ContentView: View {
     }
 
     private func handleLivePreviewAction(_ action: LivePreviewView.Action) {
-        // All three actions dismiss the live-preview screen. The difference
-        // is what happens next:
-        //   - .createFirstProduct: route to Capture (the wow moment)
-        //   - .tweakStore: TweakSheetView is presented internally by
-        //                  LivePreviewView; this case fires after the user
-        //                  dismisses the sheet — same as "Just explore"
-        //                  semantically (they go to the main app)
-        //   - .justExplore: route to the main app, skip the capture intro
-        //
-        // For all three, we flip hasSeenLivePreview so we don't re-render
-        // the welcome screen on next render tick. CaptureFlowView is the
-        // default landing for all three actions today. If we later add a
-        // separate "browse / explore" view, .justExplore would route there
-        // instead. For v1 the main app IS the capture flow.
+        // Parent-driven actions from LivePreviewView. OnePageCreator's
+        // finish path flips hasSeenLivePreview inside OnePageCreatorHostView.
         state.session.hasSeenLivePreview = true
     }
 }

@@ -1,0 +1,9 @@
+graphify-out/
+.claude/
+.git/
+*.xcassets/
+build/
+DerivedData/
+.build/
+*.xcodeproj/
+fastlane/

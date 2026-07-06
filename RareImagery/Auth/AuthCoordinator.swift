@@ -7,15 +7,17 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
 
     private let logger = APILogger(category: "AuthCoordinator")
 
-    func signInWithX(state: AppState) async {
+    func signInWithX(state: AppState, draftToken: String? = nil) async {
         do {
             let request = try await state.authService.startXAuth()
             let callbackURL = try await openWebSession(
                 url: request.authorizationURL,
                 scheme: request.callbackScheme
             )
-            let tokens = try await state.authService.completeXAuth(callbackURL: callbackURL)
+            let tokens = try await state.authService.completeXAuth(callbackURL: callbackURL, draftToken: draftToken)
             state.session.apply(tokens: tokens)
+            // Clear any pending draft claim token now that X auth succeeded (draft linked server-side).
+            try? await state.keychain.remove(.pendingDraftToken)
         } catch let error as APIError {
             if let code = error.code {
                 logger.warning("X sign-in failed: code=\(code.rawValue), reason=\(error.userFacingMessage)")

@@ -13,18 +13,27 @@ import RareImageryAPI
 ///
 /// Voice: Rare the mascot does the welcoming. Warm, brief, direct.
 ///
-/// Routing (set by parent ContentView):
-///   - "Create first product" → CaptureFlowView (the wow moment)
-///   - "Tweak my store" → TweakSheetView (modal — optional refinement)
-///   - "Just explore" → Console root (skips the wow moment for browsers)
+/// Routing:
+///   - "Create your first product" → presents `OnePageCreatorHostView`
+///     as a `.fullScreenCover` INTERNAL to this view. On publish +
+///     "View my store" the host flips `hasSeenLivePreview = true` and
+///     dismisses; on cancel (toolbar X) the user returns here.
+///   - "Tweak my store first" → `TweakSheetView` (sheet — optional
+///     refinement; flipping `hasSeenLivePreview` is the user's call
+///     via the explicit Save/Continue inside the sheet).
+///   - "Just explore" → fires `onAction(.justExplore)`; parent
+///     `ContentView` flips `hasSeenLivePreview` and routes to the
+///     main app.
 struct LivePreviewView: View {
     @Environment(AppState.self) private var state
 
-    /// Three navigation outcomes. Parent ContentView decides what to
-    /// render for each. Keeping it as an enum (vs callback closures)
-    /// makes the routing intent obvious in this file.
+    /// Navigation outcomes the parent needs to know about. The primary
+    /// "Create your first product" CTA is handled internally via
+    /// `.fullScreenCover` — the parent doesn't need a case for it
+    /// because `OnePageCreatorHostView` owns finish + dismiss. Kept as
+    /// an enum (vs. closures-per-action) so the remaining parent-driven
+    /// actions stay self-documenting.
     enum Action {
-        case createFirstProduct
         case tweakStore
         case justExplore
     }
@@ -34,6 +43,9 @@ struct LivePreviewView: View {
     let onAction: (Action) -> Void
 
     @State private var showTweakSheet = false
+
+    /// Drives the primary CTA's `.fullScreenCover` presenting OnePageCreator.
+    @State private var showOnePageCreator = false
 
     var body: some View {
         ZStack {
@@ -68,18 +80,20 @@ struct LivePreviewView: View {
         .sheet(isPresented: $showTweakSheet) {
             TweakSheetView()
         }
+        .fullScreenCover(isPresented: $showOnePageCreator) {
+            OnePageCreatorHostView(markLivePreviewComplete: true)
+                .environment(state)
+        }
     }
 
     // MARK: Sections
 
     private var headerSection: some View {
         VStack(spacing: 12) {
-            // The dog logo placeholder — replaced with Image("rareimagery-logo")
-            // once the asset is dragged into Assets.xcassets (TODO(logo) flag
-            // in WelcomeView.swift).
-            Image(systemName: "pawprint.fill")
-                .font(.system(size: 36, weight: .light))
-                .foregroundStyle(AppColor.cta)
+            Image("rareimagery-logo")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 56)
 
             Text("You're live")
                 .font(.system(size: 32, weight: .bold))
@@ -97,7 +111,7 @@ struct LivePreviewView: View {
     private var actionStack: some View {
         VStack(spacing: 12) {
             Button {
-                onAction(.createFirstProduct)
+                showOnePageCreator = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "camera.fill")

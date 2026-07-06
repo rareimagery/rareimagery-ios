@@ -32,6 +32,12 @@ public actor ProductRepository {
         let productIntent: String
         let voiceTranscript: String?
         let heroOnly: Bool
+        let heroIndex: Int?
+        let mode: String?
+        /// "photo" | "video" — the BFF's Zod schema reads `captureSource`
+        /// (VisionAnalyzeSchema); a `source` key is silently stripped and
+        /// the server defaults to "photo".
+        let captureSource: String?
     }
 
     /// Calls `/api/vision/analyze`. `dataURLs` should be JPEG base64 data URLs:
@@ -41,7 +47,10 @@ public actor ProductRepository {
         dataURLs: [String],
         intent: ProductIntent = .resell,
         voiceTranscript: String? = nil,
-        heroOnly: Bool = true
+        heroOnly: Bool = true,
+        heroIndex: Int? = nil,
+        mode: VisionAnalyzeMode = .product,
+        source: String? = nil
     ) async throws -> VisionResult {
         guard !dataURLs.isEmpty else {
             throw APIError.badRequest(code: nil, message: "analyze called with zero images")
@@ -54,7 +63,10 @@ public actor ProductRepository {
             imageUrls: dataURLs,
             productIntent: AnalyzeIntent(from: intent).rawValue,
             voiceTranscript: voiceTranscript?.isEmpty == true ? nil : voiceTranscript,
-            heroOnly: heroOnly
+            heroOnly: heroOnly,
+            heroIndex: heroIndex,
+            mode: mode.rawValue,
+            captureSource: source
         )
 
         // Force camelCase keys — APIEndpoint.json would convert to snake_case
@@ -71,7 +83,7 @@ public actor ProductRepository {
             contentType: "application/json",
             timeout: 90  // BFF enforces 90s; allow the full budget for Grok→Claude cascade
         )
-        logger.info("analyze: \(dataURLs.count) images, intent=\(intent.rawValue), heroOnly=\(heroOnly)")
+        logger.info("analyze: \(dataURLs.count) images, intent=\(intent.rawValue), mode=\(mode.rawValue), heroOnly=\(heroOnly)")
         return try await client.send(endpoint)
     }
 
