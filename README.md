@@ -69,6 +69,8 @@ App Store Connect record already exists from prior Expo work:
 
 For Phase D upload: `Product > Archive` in Xcode → Distribute App → App Store Connect.
 
+See [docs/TESTFLIGHT.md](docs/TESTFLIGHT.md) for Xcode Cloud CI setup (`RareImageryStudio` scheme, `X_CLIENT_ID` env var) and manual Archive steps.
+
 ## Anti-patterns (per `CLAUDE.md` in the BFF monorepo)
 
 - ❌ Re-implementing Grok Vision logic locally (server handles)
