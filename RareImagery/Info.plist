@@ -39,6 +39,14 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Allows HTTP to localhost (Simulator) and LAN IPs (device) for Debug
+		     builds against the local docker stack. No effect on public HTTPS;
+		     no App Store justification required for local networking. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>RareImagery uses the camera to capture photos of items you want to sell.</string>
 	<key>NSMicrophoneUsageDescription</key>

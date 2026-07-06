@@ -26,7 +26,10 @@ final class AppState {
     /// `CaptureCoordinator` returns a mock valuation instead of calling the live
     /// `/api/vision/analyze`. Flipping this to false is the whole "connect the
     /// backend" switch — no view changes needed.
-    let useMocks = true
+    /// Live since 2026-07-05: X_CLIENT_ID ships via Configuration/*.local.xcconfig
+    /// and the BFF's anonymous /api/v1/vision/value + draft claim are deployed
+    /// locally. Flip back to true for backend-free UI demos.
+    let useMocks = false
 
     init() {
         self.configuration = APIConfiguration.fromBundle
