@@ -1,4 +1,5 @@
 import SwiftUI
+import OSLog
 import RareImageryAPI
 
 /// Value-first pre-login **Video Submission Flow** — Instructions → Record →
@@ -118,6 +119,7 @@ final class FunnelViewModel {
                 valuation = FunnelValuation(from: result.draft)
             } catch {
                 errorMessage = String(describing: error)
+                os_log(.error, "funnel valuation failed: %{public}@", String(describing: error))
                 valuation = .mock
             }
             if let url {  // raw-clip retention (CAPTURE-CONTRACT §4) — async, never blocks

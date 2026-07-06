@@ -47,6 +47,17 @@ struct FunnelResultView: View {
                     .padding(.top, 16)
 
                     VStack(spacing: 10) {
+                        // Two distinct error surfaces: vm.errorMessage is the
+                        // valuation-call failure (the card above is a mock when
+                        // it's set — say so, or the user thinks Grok failed
+                        // silently); session.lastError is the auth-flow error.
+                        if let vmError = vm.errorMessage {
+                            Text("Valuation didn't come back — showing sample data. (\(vmError))")
+                                .font(AppFont.caption)
+                                .foregroundStyle(.red.opacity(0.9))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 4)
+                        }
                         if let error = state.session.lastError {
                             Text(error)
                                 .font(AppFont.caption)
