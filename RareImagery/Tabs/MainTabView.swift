@@ -86,40 +86,123 @@ struct HomeTabView: View {
 
 struct CreationsTabView: View {
     @Environment(AppState.self) private var state
+    @State private var firstProduct: ProductDetail?
+    @State private var loading = false
+    @State private var publishing = false
+    @State private var message: String?
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                switch state.capture.phase {
-                case .ready(let draft):
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Latest draft")
-                            .font(AppFont.caption)
-                            .foregroundStyle(AppColor.textSecondary)
-                        Text(draft.title)
-                            .font(AppFont.headline)
-                        if let description = draft.description, !description.isEmpty {
-                            Text(description)
-                                .font(AppFont.body)
-                                .foregroundStyle(AppColor.textSecondary)
-                        }
+            ScrollView {
+                VStack(spacing: 16) {
+                    // The pre-sign-in funnel video, claimed as the creator's
+                    // first product — editable + publishable here.
+                    if let product = firstProduct {
+                        firstProductCard(product)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .background(AppColor.surface, in: RoundedRectangle(cornerRadius: 16))
-                    .padding(.horizontal, 16)
-                default:
-                    ContentUnavailableView(
-                        "No drafts yet",
-                        systemImage: "square.stack.3d.up.slash",
-                        description: Text("Your in-progress captures will show up here.")
-                    )
+
+                    if let draft = latestDraft {
+                        draftCard(draft)
+                    }
+
+                    if firstProduct == nil && latestDraft == nil && !loading {
+                        ContentUnavailableView(
+                            "No products yet",
+                            systemImage: "square.stack.3d.up.slash",
+                            description: Text("Film an item from the Home tab and Grok will draft the listing.")
+                        )
+                        .padding(.top, 60)
+                    }
+
+                    if loading { ProgressView().tint(AppColor.gold).padding(.top, 40) }
+                    if let message { Text(message).font(AppFont.caption).foregroundStyle(AppColor.textSecondary) }
                 }
-                Spacer()
+                .padding(.top, 16)
+                .frame(maxWidth: .infinity)
             }
-            .padding(.top, 16)
             .background(AppColor.background)
             .navigationTitle("Creations")
+            .task { await loadFirstProduct() }
+        }
+    }
+
+    private var latestDraft: ProductDraft? {
+        if case .ready(let draft) = state.capture.phase { return draft }
+        return nil
+    }
+
+    private func firstProductCard(_ product: ProductDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(product.isPublished ? "YOUR FIRST PRODUCT · LIVE" : "YOUR FIRST PRODUCT · DRAFT")
+                .font(AppFont.mono(10, .semibold)).tracking(1.4)
+                .foregroundStyle(product.isPublished ? AppColor.success : AppColor.gold)
+            Text(product.title ?? "Untitled item")
+                .font(AppFont.headline).foregroundStyle(AppColor.textPrimary)
+            if let description = product.description, !description.isEmpty {
+                Text(description).font(AppFont.bodyText(13)).foregroundStyle(AppColor.textSecondary)
+                    .lineLimit(3)
+            }
+            if let price = product.price {
+                Text("$\(price as NSDecimalNumber)")
+                    .font(AppFont.mono(15)).foregroundStyle(AppColor.gold)
+            }
+            if !product.isPublished {
+                Button {
+                    Task { await publish(product) }
+                } label: {
+                    Text(publishing ? "Publishing…" : "Publish to store")
+                        .font(AppFont.buttonLabel).foregroundStyle(.black)
+                        .frame(maxWidth: .infinity).padding(.vertical, 13)
+                        .background(AppColor.cta, in: Capsule())
+                }
+                .disabled(publishing)
+                .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColor.borderGold, lineWidth: 1))
+        .padding(.horizontal, 16)
+    }
+
+    private func draftCard(_ draft: ProductDraft) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("LATEST DRAFT").font(AppFont.mono(10, .semibold)).tracking(1.4)
+                .foregroundStyle(AppColor.textSecondary)
+            Text(draft.title).font(AppFont.headline).foregroundStyle(AppColor.textPrimary)
+            if let description = draft.description, !description.isEmpty {
+                Text(description).font(AppFont.bodyText(13)).foregroundStyle(AppColor.textSecondary).lineLimit(3)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, 16)
+    }
+
+    private func loadFirstProduct() async {
+        guard firstProduct == nil else { return }
+        let stored = (try? await state.keychain.get(.firstProductUuid)) ?? nil
+        guard let uuid = stored, !uuid.isEmpty else { return }
+        loading = true
+        defer { loading = false }
+        do {
+            firstProduct = try await state.productRepository.get(uuid: uuid)
+        } catch {
+            // Non-fatal — the product still exists server-side; just not shown.
+            message = "Couldn't load your first product yet."
+        }
+    }
+
+    private func publish(_ product: ProductDetail) async {
+        publishing = true
+        defer { publishing = false }
+        do {
+            firstProduct = try await state.productRepository.publish(uuid: product.uuid)
+            message = "Published — it's live on your store."
+        } catch {
+            message = "Publish failed. Try again."
         }
     }
 }

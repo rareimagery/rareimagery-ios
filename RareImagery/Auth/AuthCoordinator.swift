@@ -26,7 +26,13 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
                 deviceId: deviceId
             )
             state.session.apply(tokens: tokens)
-            // Clear any pending draft claim state now that X auth succeeded (draft linked server-side).
+            // The pre-sign-in funnel draft is now claimed server-side. Promote
+            // its uuid to `firstProductUuid` (instead of dropping it) so the
+            // Creations tab can surface that video as the creator's first
+            // product, editable + publishable.
+            if let claimed = draftUuid, !claimed.isEmpty {
+                try? await state.keychain.set(claimed, for: .firstProductUuid)
+            }
             try? await state.keychain.remove(.pendingDraftToken)
             try? await state.keychain.remove(.pendingDraftUuid)
         } catch let error as APIError {

@@ -47,6 +47,12 @@ public actor KeychainStore {
         // across a sign-out/sign-in cycle. Deliberately NOT cleared by
         // `clearAll()` or `clearAnonymousState()`.
         case deviceId = "ri.device_id"
+
+        // `firstProductUuid` — set from the pre-sign-in funnel draft once it
+        // is claimed at sign-in, so the app can surface that video/valuation
+        // as the creator's first product (editable + publishable). Distinct
+        // from `pendingDraftUuid`, which is consumed by the claim itself.
+        case firstProductUuid = "ri.first_product_uuid"
     }
 
     private let service: String
