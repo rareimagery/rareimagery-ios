@@ -47,10 +47,31 @@ struct FunnelResultView: View {
                     .padding(.top, 16)
 
                     VStack(spacing: 10) {
+                        if let error = state.session.lastError {
+                            Text(error)
+                                .font(AppFont.caption)
+                                .foregroundStyle(.red.opacity(0.9))
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 4)
+                        }
+
                         FunnelGoldButton(title: authing ? "Connecting to X…" : (state.session.isAnonymous ? "Claim this draft" : "Create your store to sell")) {
                             createStore()
                         }
                         .disabled(authing)
+
+                        #if DEBUG
+                        Button {
+                            state.debugSimulateSignIn()
+                        } label: {
+                            Text("Skip sign-in (testing)")
+                                .font(AppFont.bodyText(14))
+                                .foregroundStyle(.white.opacity(0.55))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                        }
+                        #endif
+
                         Text("NEXT · ACCOUNT CREATION")
                             .font(AppFont.mono(10)).tracking(1.5).foregroundStyle(.white.opacity(0.4))
                         Button { vm.reset() } label: {

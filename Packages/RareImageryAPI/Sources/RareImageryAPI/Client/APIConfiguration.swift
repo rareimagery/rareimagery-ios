@@ -11,6 +11,20 @@ public struct APIConfiguration: Sendable {
         "\(xCallbackScheme)://auth\(xCallbackPath)"
     }
 
+    /// True when a real X OAuth 2.0 Client ID is wired (not xcconfig placeholders).
+    public var isXClientIDConfigured: Bool {
+        let id = xClientID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !id.isEmpty else { return false }
+        let placeholders = [
+            "REPLACE_ME",
+            "paste_your",
+            "your_x_oauth",
+            "YOUR_X_CLIENT",
+            "paste your"
+        ]
+        return !placeholders.contains { id.localizedCaseInsensitiveContains($0) }
+    }
+
     public init(
         baseURL: URL,
         xClientID: String,

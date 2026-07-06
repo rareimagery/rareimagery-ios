@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AuthenticationServices
 import RareImageryAPI
 
@@ -71,7 +72,16 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
     }
 
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        ASPresentationAnchor()
+        let scenes = UIApplication.shared.connectedScenes
+        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
+            ?? scenes.compactMap { $0 as? UIWindowScene }.first
+        if let window = windowScene?.windows.first(where: \.isKeyWindow) {
+            return window
+        }
+        if let window = windowScene?.windows.first {
+            return window
+        }
+        return ASPresentationAnchor()
     }
 
 }

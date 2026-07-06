@@ -25,8 +25,12 @@ public actor AuthService {
 
     /// Returns the URL to open in ASWebAuthenticationSession plus the callback scheme to listen for.
     public func startXAuth(scopes: [String] = ["tweet.read", "users.read", "offline.access"]) throws -> OAuthRequest {
-        guard !configuration.xClientID.isEmpty else {
-            throw APIError.invalidConfiguration("XClientID is empty — set XClientID in xcconfig / Info.plist")
+        guard configuration.isXClientIDConfigured else {
+            throw APIError.invalidConfiguration(
+                "X OAuth Client ID is not set. Copy Configuration/Debug.local.xcconfig.example " +
+                "to Debug.local.xcconfig and paste your X app's OAuth 2.0 Client ID " +
+                "(developer.x.com → your app → Keys and tokens). The BFF needs the matching secret."
+            )
         }
         let verifier = PKCE.generateVerifier()
         let challenge = PKCE.challenge(for: verifier)

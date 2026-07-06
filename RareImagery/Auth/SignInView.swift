@@ -69,12 +69,16 @@ struct SignInView: View {
                     .foregroundStyle(AppColor.textSecondary)
 
                 #if DEBUG
-                Button("Skip auth (debug)") {
+                Button {
                     state.debugSimulateSignIn()
+                } label: {
+                    Text("Skip sign-in (testing)")
+                        .font(AppFont.bodyText(14))
+                        .foregroundStyle(AppColor.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
                 }
-                .font(AppFont.caption)
-                .foregroundStyle(AppColor.textSecondary)
-                .padding(.top, 12)
+                .padding(.top, 8)
                 #endif
             }
 

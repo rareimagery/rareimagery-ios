@@ -258,8 +258,8 @@ final class AppState {
     }
 
     #if DEBUG
-    /// Bypass real OAuth for capture-flow testing without a backend.
-    /// Synthesizes a fake MobileClaims envelope and flips session to signedIn.
+    /// Bypass real OAuth for local testing without X or the BFF.
+    /// Lands in the main app shell with a synthetic signed-in session.
     func debugSimulateSignIn() {
         let now = Int(Date().timeIntervalSince1970)
         let claims = MobileClaims(
@@ -267,12 +267,15 @@ final class AppState {
             storeUuid: "debug-store",
             slug: "debug",
             handle: "debug_user",
-            role: "x_creator",
+            role: "CREATOR",
             aud: MobileClaims.expectedAudience,
             exp: now + 3600,
             iat: now
         )
         session.status = .signedIn(claims)
+        session.lastError = nil
+        session.hasSeenLivePreview = true
+        session.hasSeenFunnel = true
     }
     #endif
 }

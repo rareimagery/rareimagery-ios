@@ -40,8 +40,8 @@ public enum APIError: Error, Sendable, Equatable {
             return m
         case .invalidConfiguration(let m):
             return "Configuration error: \(m)"
-        case .network:
-            return "Network unreachable. Check your connection and try again."
+        case .network(let urlError):
+            return Self.networkMessage(for: urlError)
         case .decode(let m):
             return "Couldn't read the server's response. (\(m))"
         case .notFound:
@@ -70,6 +70,18 @@ public enum APIError: Error, Sendable, Equatable {
             return true
         default:
             return false
+        }
+    }
+
+    private static func networkMessage(for urlError: URLError) -> String {
+        switch urlError.code {
+        case .cannotConnectToHost, .networkConnectionLost, .timedOut:
+            return "Can't reach the RareImagery server. For local dev, run `npm run dev` in x-store-next " +
+                "and confirm API_BASE_URL in Debug.xcconfig points at it."
+        case .notConnectedToInternet:
+            return "No internet connection. Check your network and try again."
+        default:
+            return "Network error: \(urlError.localizedDescription)"
         }
     }
 
