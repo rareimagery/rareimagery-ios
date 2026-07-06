@@ -40,11 +40,12 @@ struct ContentView: View {
                 // mints storeUuid/slug atomically at sign-in. If the wire ever
                 // decouples, the old wizard catches it.
                 OnboardingView(keychain: state.keychain)
-            } else if !state.session.hasSeenLivePreview {
-                // The "You're live" screen — first thing a freshly-signed-in
-                // user sees. Three actions decide what comes next.
-                LivePreviewView(onAction: handleLivePreviewAction)
             } else {
+                // Straight to the app. The old "You're live / Create your
+                // first product" (LivePreviewView) interstitial routed into
+                // the t-shirt/merch generator and has been removed — signed-in
+                // users land on Home, where "Add a product" is the primary
+                // (video → Grok) create action.
                 MainTabView()
             }
 
@@ -64,9 +65,4 @@ struct ContentView: View {
         (claims.storeUuid ?? "").isEmpty || (claims.slug ?? "").isEmpty
     }
 
-    private func handleLivePreviewAction(_ action: LivePreviewView.Action) {
-        // Parent-driven actions from LivePreviewView. OnePageCreator's
-        // finish path flips hasSeenLivePreview inside OnePageCreatorHostView.
-        state.session.hasSeenLivePreview = true
-    }
 }
