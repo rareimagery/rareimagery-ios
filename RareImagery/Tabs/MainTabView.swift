@@ -3,6 +3,7 @@ import RareImageryAPI
 
 struct HomeTabView: View {
     @Environment(AppState.self) private var state
+    @State private var showProductCapture = false
     @State private var showOnePageCreator = false
 
     var body: some View {
@@ -14,16 +15,21 @@ struct HomeTabView: View {
                     Spacer()
 
                     VStack(spacing: 10) {
-                        Text("RareVision")
+                        Text("Add a product")
                             .font(AppFont.largeTitle)
                             .foregroundStyle(AppColor.textPrimary)
-                        Text("Turn your look into merch.")
+                        Text("Film it — Grok drafts the whole listing.")
                             .font(AppFont.callout)
                             .foregroundStyle(AppColor.textSecondary)
                     }
 
+                    // Primary create = resale capture (App Flow act 3):
+                    // film an item, Grok Vision drafts the listing. The
+                    // merch generator stays reachable below as a secondary
+                    // path — it used to own this button, which made every
+                    // "create product" turn into t-shirt/hoodie ideas.
                     Button {
-                        showOnePageCreator = true
+                        showProductCapture = true
                     } label: {
                         VStack(spacing: 10) {
                             Image(systemName: "sparkles")
@@ -37,7 +43,16 @@ struct HomeTabView: View {
                         .shadow(color: AppColor.cta.opacity(0.35), radius: 24, y: 8)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Create merch")
+                    .accessibilityLabel("Create product")
+
+                    Button {
+                        showOnePageCreator = true
+                    } label: {
+                        Text("Design merch instead")
+                            .font(AppFont.bodyText(14))
+                            .foregroundStyle(AppColor.textSecondary)
+                    }
+                    .buttonStyle(.plain)
 
                     Spacer()
                     Spacer()
@@ -45,6 +60,10 @@ struct HomeTabView: View {
             }
             .navigationTitle("Home")
             .navigationBarTitleDisplayMode(.inline)
+            .fullScreenCover(isPresented: $showProductCapture) {
+                FirstProductFlowView()
+                    .environment(state)
+            }
             .fullScreenCover(isPresented: $showOnePageCreator) {
                 OnePageCreatorHostView()
                     .environment(state)
