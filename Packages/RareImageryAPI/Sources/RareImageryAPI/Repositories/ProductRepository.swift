@@ -240,7 +240,12 @@ public actor ProductRepository {
             method: .patch,
             body: fields
         )
-        return try await client.send(endpoint)
+        // PATCH returns an ack ({ ok, updated_fields, saved_at }), not a
+        // ProductDetail — decoding it as one used to throw and surface as
+        // "price isn't set" even though the save succeeded. Ack it raw, then
+        // re-read the product for fresh detail.
+        _ = try await client.sendRaw(endpoint)
+        return try await get(uuid: uuid)
     }
 
     // MARK: - DELETE /api/products/[uuid]

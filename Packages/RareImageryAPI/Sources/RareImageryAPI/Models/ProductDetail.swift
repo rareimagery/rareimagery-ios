@@ -18,4 +18,15 @@ public struct ProductDetail: Codable, Sendable, Equatable, Identifiable {
 
     public var id: String { uuid }
     public var isPublished: Bool { status == "published" }
+
+    // APIClient decodes with .convertFromSnakeCase, so the GET route's
+    // `price_usd` arrives as `priceUsd` and `thumbnail_url` as `thumbnailUrl`.
+    // Map them onto `price`/`thumbnail` so the editor prefills Grok's
+    // estimated price (stored on the draft variation) instead of nil.
+    enum CodingKeys: String, CodingKey {
+        case uuid, title, description, status, category, condition, tags
+        case price = "priceUsd"
+        case thumbnail = "thumbnailUrl"
+        case storefrontUrl, createdAt, updatedAt
+    }
 }
