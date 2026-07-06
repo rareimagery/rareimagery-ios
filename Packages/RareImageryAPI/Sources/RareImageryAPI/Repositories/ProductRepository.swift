@@ -87,6 +87,58 @@ public actor ProductRepository {
         return try await client.send(endpoint)
     }
 
+    // MARK: - POST /api/v1/vision/value  (anonymous pre-login valuation)
+    //
+    // Value-first funnel contract (postdates VALUE-FIRST-OAUTH.md's
+    // draft_token-only description — this is the current source of truth):
+    // no Authorization header, identity is `deviceId` alone. Reuses the
+    // shared `ProductDraft` shape via `AnonymousValueResponse` — this is
+    // NOT a parallel model, just a different auth mode on vision analysis.
+    // Success returns `draftUuid` (a Drupal product uuid, or nil) which the
+    // caller should persist and thread through the X OAuth claim callback.
+
+    /// Calls `/api/v1/vision/value`. `dataURLs` should be JPEG base64 data
+    /// URLs (1-4 entries). No bearer token is attached (`requiresAuth: false`)
+    /// — this is the anonymous entry point to valuation, called before the
+    /// user has any session at all.
+    public func valueAnonymously(
+        dataURLs: [String],
+        voiceTranscript: String? = nil,
+        deviceId: String,
+        source: String? = nil
+    ) async throws -> AnonymousValueResponse {
+        guard !dataURLs.isEmpty else {
+            throw APIError.badRequest(code: nil, message: "valueAnonymously called with zero images")
+        }
+        guard dataURLs.count <= 4 else {
+            throw APIError.badRequest(code: nil, message: "valueAnonymously accepts at most 4 images, got \(dataURLs.count)")
+        }
+
+        let body = AnonymousValueRequest(
+            imageUrls: dataURLs,
+            voiceTranscript: voiceTranscript?.isEmpty == true ? nil : voiceTranscript,
+            deviceId: deviceId,
+            source: source
+        )
+
+        // Force camelCase keys, matching the rest of the vision surface
+        // (APIEndpoint.json would convert to snake_case).
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .useDefaultKeys
+        let data = try encoder.encode(body)
+
+        let endpoint = APIEndpoint(
+            path: "/api/v1/vision/value",
+            method: .post,
+            body: data,
+            requiresAuth: false,
+            contentType: "application/json",
+            timeout: 90
+        )
+        logger.info("valueAnonymously: \(dataURLs.count) images, deviceId=\(deviceId)")
+        return try await client.send(endpoint)
+    }
+
     // MARK: - POST /api/vision/merch-ideas  (merch-creation pipeline, JSON + base64)
     //
     // Distinct from `/api/vision/analyze` — returns 3–5 merch ideas with

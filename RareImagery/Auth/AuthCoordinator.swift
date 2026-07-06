@@ -7,17 +7,27 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
 
     private let logger = APILogger(category: "AuthCoordinator")
 
-    func signInWithX(state: AppState, draftToken: String? = nil) async {
+    func signInWithX(state: AppState, draftToken: String? = nil, draftUuid: String? = nil) async {
         do {
             let request = try await state.authService.startXAuth()
             let callbackURL = try await openWebSession(
                 url: request.authorizationURL,
                 scheme: request.callbackScheme
             )
-            let tokens = try await state.authService.completeXAuth(callbackURL: callbackURL, draftToken: draftToken)
+            // deviceId always rides along when we have one — it lets the
+            // backend correlate anonymous activity with the claiming
+            // creator even when there's no specific draftUuid to claim.
+            let deviceId = try? await state.keychain.stableDeviceId()
+            let tokens = try await state.authService.completeXAuth(
+                callbackURL: callbackURL,
+                draftToken: draftToken,
+                draftUuid: draftUuid,
+                deviceId: deviceId
+            )
             state.session.apply(tokens: tokens)
-            // Clear any pending draft claim token now that X auth succeeded (draft linked server-side).
+            // Clear any pending draft claim state now that X auth succeeded (draft linked server-side).
             try? await state.keychain.remove(.pendingDraftToken)
+            try? await state.keychain.remove(.pendingDraftUuid)
         } catch let error as APIError {
             if let code = error.code {
                 logger.warning("X sign-in failed: code=\(code.rawValue), reason=\(error.userFacingMessage)")

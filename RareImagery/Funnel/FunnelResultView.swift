@@ -130,7 +130,8 @@ struct FunnelResultView: View {
             Task {
                 authing = true
                 let draftToken = state.session.isAnonymous ? (try? await state.keychain.get(.pendingDraftToken)) : nil
-                await coordinator.signInWithX(state: state, draftToken: draftToken)
+                let draftUuid = state.session.isAnonymous ? (try? await state.keychain.get(.pendingDraftUuid)) : nil
+                await coordinator.signInWithX(state: state, draftToken: draftToken, draftUuid: draftUuid ?? nil)
                 authing = false
             }
         }

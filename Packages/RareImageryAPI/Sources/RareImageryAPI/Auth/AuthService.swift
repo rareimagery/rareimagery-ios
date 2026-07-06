@@ -56,8 +56,17 @@ public actor AuthService {
 
     /// Process the callback URL returned by ASWebAuthenticationSession.
     /// Extracts the code, validates state, and exchanges via AuthRepository.
-    /// If `draftToken` is non-nil it is forwarded to the x/callback for claim handoff.
-    public func completeXAuth(callbackURL: URL, draftToken: String? = nil) async throws -> AuthTokenResponse {
+    /// If `draftToken` is non-nil it is forwarded to the x/callback for claim
+    /// handoff (legacy authenticated-analyze path). `draftUuid` and
+    /// `deviceId` are the current, additive contract for claiming a draft
+    /// produced by the anonymous `/api/v1/vision/value` endpoint — both
+    /// optional and independent of `draftToken`.
+    public func completeXAuth(
+        callbackURL: URL,
+        draftToken: String? = nil,
+        draftUuid: String? = nil,
+        deviceId: String? = nil
+    ) async throws -> AuthTokenResponse {
         guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false) else {
             throw APIError.authFailed("Malformed callback URL")
         }
@@ -85,7 +94,9 @@ public actor AuthService {
             code: code,
             codeVerifier: verifier,
             redirectURI: configuration.redirectURI,
-            draftToken: draftToken
+            draftToken: draftToken,
+            draftUuid: draftUuid,
+            deviceId: deviceId
         )
         try await client.persist(tokens)
         logger.info("X OAuth complete — token persisted")

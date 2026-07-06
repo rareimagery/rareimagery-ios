@@ -90,6 +90,11 @@ final class FunnelViewModel {
     /// On-device reduction + valuation (hybrid). Frames + transcript are always
     /// produced here (the Grok-independent work); the valuation is mocked while
     /// `useMocks` is on, real otherwise. Raw-clip upload is fired async + gated.
+    ///
+    /// Real path calls the ANONYMOUS `POST /api/v1/vision/value` endpoint
+    /// (no bearer token — the funnel runs before any session exists), not
+    /// the authenticated `/api/vision/analyze` used by product-mode capture.
+    /// See `ProductRepository.valueAnonymously`.
     private func process(clip url: URL?) async {
         var frames: [String] = []
         var transcript: String?
@@ -100,15 +105,17 @@ final class FunnelViewModel {
 
         if let appState, !appState.useMocks, !frames.isEmpty {
             do {
-                let result = try await appState.productRepository.analyze(
-                    dataURLs: frames, intent: .resell,
-                    voiceTranscript: transcript, heroOnly: false,
-                    mode: .valuation, source: "video"
+                let deviceId = try await appState.keychain.stableDeviceId()
+                let result = try await appState.productRepository.valueAnonymously(
+                    dataURLs: frames,
+                    voiceTranscript: transcript,
+                    deviceId: deviceId,
+                    source: "video"
                 )
-                if let token = result.draftToken {
-                    try? await appState.keychain.set(token, for: .pendingDraftToken)
+                if let uuid = result.draftUuid {
+                    try? await appState.keychain.set(uuid, for: .pendingDraftUuid)
                 }
-                valuation = FunnelValuation(from: result)
+                valuation = FunnelValuation(from: result.draft)
             } catch {
                 errorMessage = String(describing: error)
                 valuation = .mock

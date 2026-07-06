@@ -29,6 +29,24 @@ public actor KeychainStore {
         // vision analysis. Persisted so it survives restart; passed through
         // x/callback then cleared on successful claim.
         case pendingDraftToken = "ri.pending_draft_token"
+
+        // `pendingDraftUuid` — companion to `pendingDraftToken` for the
+        // POST /api/v1/vision/value contract: the anonymous valuation
+        // response returns a Drupal product uuid (`draftUuid`) instead of
+        // a JWT. Threaded through the X OAuth callback's optional
+        // `draftUuid` field so the backend can attach the claimed draft to
+        // the new creator. Cleared alongside `pendingDraftToken` on claim.
+        case pendingDraftUuid = "ri.pending_draft_uuid"
+
+        // `deviceId` — a stable UUID minted once per install and reused
+        // forever (unlike `anonymousDeviceId`, which is cleared on sign-out
+        // via `clearAnonymousState()`). This is the identity the anonymous
+        // valuation endpoint (`/api/v1/vision/value`) rate-limits by, and it
+        // is threaded through the X OAuth callback so the backend can
+        // correlate anonymous activity with the claiming creator even
+        // across a sign-out/sign-in cycle. Deliberately NOT cleared by
+        // `clearAll()` or `clearAnonymousState()`.
+        case deviceId = "ri.device_id"
     }
 
     private let service: String
@@ -114,5 +132,19 @@ public actor KeychainStore {
     public func clearAnonymousState() throws {
         try remove(.anonymousDeviceId)
         try remove(.anonymousFreeUsesUsed)
+    }
+
+    /// Returns the stable per-install device id used for anonymous
+    /// valuation (`POST /api/v1/vision/value`), minting and persisting one
+    /// on first call if none exists yet. Distinct from `.anonymousDeviceId`
+    /// (the anonymous-auth-session identity, which is cleared on sign-out) —
+    /// this id is meant to outlive sign-in/sign-out cycles.
+    public func stableDeviceId() throws -> String {
+        if let existing = try get(.deviceId), !existing.isEmpty {
+            return existing
+        }
+        let fresh = UUID().uuidString.lowercased()
+        try set(fresh, for: .deviceId)
+        return fresh
     }
 }
