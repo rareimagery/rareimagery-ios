@@ -243,7 +243,11 @@ struct OnboardingAPI {
     var provisionStore: (_ slug: String, _ displayName: String) async throws -> Void
     var putCircle: (_ pins: [String]) async throws -> Void
 
-    static let baseURL = URL(string: "https://www.rareimagery.net")!
+    // Same base URL the rest of the app uses (Debug → local stack, Release
+    // → production). This was hardcoded to production, so the wizard's
+    // slug checks silently hit the live site from local/dev builds and
+    // every name read as unavailable.
+    static let baseURL = APIConfiguration.fromBundle.baseURL
 
     /// Production wiring. Pass the app's `KeychainStore` for Bearer-auth on
     /// the three endpoints that require it. `nil` keychain falls back to
