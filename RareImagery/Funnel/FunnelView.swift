@@ -11,6 +11,10 @@ import RareImageryAPI
 /// `from-video` valuation. The account wall sits on the Result CTA.
 struct VideoSubmissionFunnelView: View {
     var onExit: (() -> Void)? = nil
+    /// `true` when reused as the signed-in "Create a product" flow: the
+    /// value call is authenticated (BFF binds the draft to the creator),
+    /// and the result CTA becomes "Add to store" instead of "Claim with X".
+    var productMode: Bool = false
     @State private var vm = FunnelViewModel()
     @Environment(AppState.self) private var state
 
@@ -27,6 +31,7 @@ struct VideoSubmissionFunnelView: View {
         .animation(.easeInOut(duration: 0.25), value: vm.screen)
         .task {
             vm.appState = state
+            vm.productMode = productMode
             await vm.prepareCamera()
         }
     }
@@ -42,6 +47,9 @@ final class FunnelViewModel {
     var valuation: FunnelValuation?
     var errorMessage: String?
     var appState: AppState?
+    /// Set by VideoSubmissionFunnelView when used for signed-in product
+    /// creation (authenticated value call + "Add to store" result CTA).
+    var productMode = false
     let capture = VideoCaptureService()
 
     let prompts = ["What is it?", "How old is it?", "Any flaws or wear?",
@@ -111,9 +119,14 @@ final class FunnelViewModel {
                     dataURLs: frames,
                     voiceTranscript: transcript,
                     deviceId: deviceId,
-                    source: "video"
+                    source: "video",
+                    // Signed-in product creation → authenticated call so the
+                    // BFF binds the draft to the creator (owned product).
+                    authenticated: productMode && appState.session.isSignedIn
                 )
                 if let uuid = result.draftUuid {
+                    // In product mode the draft is already owned; otherwise
+                    // it's the pending draft claimed at sign-in.
                     try? await appState.keychain.set(uuid, for: .pendingDraftUuid)
                 }
                 valuation = FunnelValuation(from: result.draft)

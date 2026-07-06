@@ -7,7 +7,6 @@ struct CaptureView: View {
     @Environment(CaptureSession.self) private var capture
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var showCamera = false
-    @State private var didAutoOpenCamera = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -44,16 +43,6 @@ struct CaptureView: View {
                 }
             }
             .ignoresSafeArea()
-        }
-        .task {
-            // "Take a photo of your product" should open the live camera
-            // directly, not a picker screen. Auto-present it once on first
-            // entry with no shots; if the user cancels they land on the
-            // empty state with explicit Camera / Library choices.
-            if capture.shots.isEmpty, CameraPicker.isAvailable, !didAutoOpenCamera {
-                didAutoOpenCamera = true
-                showCamera = true
-            }
         }
     }
 

@@ -66,10 +66,20 @@ struct FunnelResultView: View {
                                 .padding(.horizontal, 4)
                         }
 
-                        FunnelGoldButton(title: authing ? "Connecting to X…" : (state.session.isAnonymous ? "Claim this draft" : "Create your store to sell")) {
-                            createStore()
+                        if vm.productMode {
+                            // Signed-in product creation: the draft is already
+                            // created + owned by the BFF. This just closes the
+                            // flow back to the store, where it's an editable
+                            // product (review + publish).
+                            FunnelGoldButton(title: "Add to store") {
+                                onExit?()
+                            }
+                        } else {
+                            FunnelGoldButton(title: authing ? "Connecting to X…" : (state.session.isAnonymous ? "Claim this draft" : "Create your store to sell")) {
+                                createStore()
+                            }
+                            .disabled(authing)
                         }
-                        .disabled(authing)
 
                         #if DEBUG
                         Button {

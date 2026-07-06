@@ -3,7 +3,8 @@ import RareImageryAPI
 
 struct HomeTabView: View {
     @Environment(AppState.self) private var state
-    @State private var showProductCapture = false
+    @State private var showVideoCreate = false
+    @State private var showPhotoCapture = false
     @State private var showOnePageCreator = false
 
     var body: some View {
@@ -23,17 +24,15 @@ struct HomeTabView: View {
                             .foregroundStyle(AppColor.textSecondary)
                     }
 
-                    // Primary create = resale capture (App Flow act 3):
-                    // film an item, Grok Vision drafts the listing. The
-                    // merch generator stays reachable below as a secondary
-                    // path — it used to own this button, which made every
-                    // "create product" turn into t-shirt/hoodie ideas.
+                    // Primary = the SAME video → Grok Vision flow as sign-up.
+                    // Authenticated, so the BFF binds the resulting draft to
+                    // this creator (owned, editable product in their store).
                     Button {
-                        showProductCapture = true
+                        showVideoCreate = true
                     } label: {
                         VStack(spacing: 10) {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 36, weight: .semibold))
+                            Image(systemName: "video.fill")
+                                .font(.system(size: 34, weight: .semibold))
                             Text("Create")
                                 .font(.system(size: 22, weight: .bold))
                         }
@@ -43,14 +42,23 @@ struct HomeTabView: View {
                         .shadow(color: AppColor.cta.opacity(0.35), radius: 24, y: 8)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Create product")
+                    .accessibilityLabel("Create product from video")
 
-                    Button {
-                        showOnePageCreator = true
-                    } label: {
-                        Text("Design merch instead")
-                            .font(AppFont.bodyText(14))
-                            .foregroundStyle(AppColor.textSecondary)
+                    VStack(spacing: 6) {
+                        Button {
+                            showPhotoCapture = true
+                        } label: {
+                            Text("Use photos instead")
+                                .font(AppFont.bodyText(14))
+                                .foregroundStyle(AppColor.textSecondary)
+                        }
+                        Button {
+                            showOnePageCreator = true
+                        } label: {
+                            Text("Design merch instead")
+                                .font(AppFont.bodyText(14))
+                                .foregroundStyle(AppColor.textSecondary)
+                        }
                     }
                     .buttonStyle(.plain)
 
@@ -60,7 +68,11 @@ struct HomeTabView: View {
             }
             .navigationTitle("Home")
             .navigationBarTitleDisplayMode(.inline)
-            .fullScreenCover(isPresented: $showProductCapture) {
+            .fullScreenCover(isPresented: $showVideoCreate) {
+                VideoSubmissionFunnelView(onExit: { showVideoCreate = false }, productMode: true)
+                    .environment(state)
+            }
+            .fullScreenCover(isPresented: $showPhotoCapture) {
                 FirstProductFlowView()
                     .environment(state)
             }

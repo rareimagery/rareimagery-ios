@@ -98,14 +98,20 @@ public actor ProductRepository {
     // caller should persist and thread through the X OAuth claim callback.
 
     /// Calls `/api/v1/vision/value`. `dataURLs` should be JPEG base64 data
-    /// URLs (1-4 entries). No bearer token is attached (`requiresAuth: false`)
-    /// — this is the anonymous entry point to valuation, called before the
-    /// user has any session at all.
+    /// URLs (1-4 entries).
+    ///
+    /// `authenticated` toggles the bearer token. The anonymous funnel calls
+    /// with `false` (pre-session valuation). In-app product creation (a
+    /// signed-in creator) calls with `true`: the BFF then binds the created
+    /// draft to the creator immediately, so it lands as an editable product
+    /// in their store (response `owned == true`). Same endpoint, two modes —
+    /// the server distinguishes by the token's audience.
     public func valueAnonymously(
         dataURLs: [String],
         voiceTranscript: String? = nil,
         deviceId: String,
-        source: String? = nil
+        source: String? = nil,
+        authenticated: Bool = false
     ) async throws -> AnonymousValueResponse {
         guard !dataURLs.isEmpty else {
             throw APIError.badRequest(code: nil, message: "valueAnonymously called with zero images")
@@ -131,11 +137,11 @@ public actor ProductRepository {
             path: "/api/v1/vision/value",
             method: .post,
             body: data,
-            requiresAuth: false,
+            requiresAuth: authenticated,
             contentType: "application/json",
             timeout: 90
         )
-        logger.info("valueAnonymously: \(dataURLs.count) images, deviceId=\(deviceId)")
+        logger.info("valueAnonymously: \(dataURLs.count) images, deviceId=\(deviceId), authed=\(authenticated)")
         return try await client.send(endpoint)
     }
 
