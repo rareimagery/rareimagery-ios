@@ -265,8 +265,14 @@ public actor ProductRepository {
             path: "/api/products/\(uuid)/publish",
             method: .post,
             body: nil,
+            requiresAuth: true,
             contentType: "application/json"
         )
-        return try await client.send(endpoint)
+        // Publish returns an ack ({ ok, product_uuid, status, storefront_url }),
+        // not a ProductDetail — decoding it as one threw on the missing `uuid`
+        // and surfaced as "Couldn't publish" despite the server returning 200.
+        // Ack it raw, then re-read the (now published) product.
+        _ = try await client.sendRaw(endpoint)
+        return try await get(uuid: uuid)
     }
 }
