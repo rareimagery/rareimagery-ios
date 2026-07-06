@@ -193,6 +193,21 @@ public actor ProductRepository {
         return try await client.send(endpoint)
     }
 
+    // MARK: - GET /api/stores/products  (the signed-in creator's products)
+
+    /// Lists every product owned by the signed-in creator (drafts + live),
+    /// filtered server-side by their profile — never trusts client input.
+    public func listMine() async throws -> [StoreProduct] {
+        let endpoint = APIEndpoint(
+            path: "/api/stores/products",
+            method: .get,
+            requiresAuth: true,
+            timeout: 20
+        )
+        let response: StoreProductsResponse = try await client.send(endpoint)
+        return response.products
+    }
+
     // MARK: - GET /api/products/[uuid]
 
     public func get(uuid: String) async throws -> ProductDetail {

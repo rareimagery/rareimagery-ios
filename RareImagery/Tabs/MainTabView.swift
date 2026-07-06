@@ -84,122 +84,103 @@ struct HomeTabView: View {
     }
 }
 
-struct CreationsTabView: View {
+/// Products tab — every product the signed-in creator has made (drafts +
+/// live), from GET /api/stores/products. Unpublished drafts get a Publish
+/// action inline; this is where the pre-sign-in funnel video also lands.
+struct ProductsTabView: View {
     @Environment(AppState.self) private var state
-    @State private var firstProduct: ProductDetail?
+    @State private var products: [StoreProduct] = []
     @State private var loading = false
-    @State private var publishing = false
+    @State private var publishingId: String?
     @State private var message: String?
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
-                    // The pre-sign-in funnel video, claimed as the creator's
-                    // first product — editable + publishable here.
-                    if let product = firstProduct {
-                        firstProductCard(product)
-                    }
-
-                    if let draft = latestDraft {
-                        draftCard(draft)
-                    }
-
-                    if firstProduct == nil && latestDraft == nil && !loading {
+                LazyVStack(spacing: 14) {
+                    if loading && products.isEmpty {
+                        ProgressView().tint(AppColor.gold).padding(.top, 60)
+                    } else if products.isEmpty {
                         ContentUnavailableView(
                             "No products yet",
-                            systemImage: "square.stack.3d.up.slash",
-                            description: Text("Film an item from the Home tab and Grok will draft the listing.")
+                            systemImage: "bag",
+                            description: Text("Tap Create on the Home tab, film an item, and Grok drafts the listing.")
                         )
                         .padding(.top, 60)
+                    } else {
+                        ForEach(products) { product in
+                            productCard(product)
+                        }
                     }
-
-                    if loading { ProgressView().tint(AppColor.gold).padding(.top, 40) }
-                    if let message { Text(message).font(AppFont.caption).foregroundStyle(AppColor.textSecondary) }
+                    if let message {
+                        Text(message).font(AppFont.caption)
+                            .foregroundStyle(AppColor.textSecondary).padding(.top, 4)
+                    }
                 }
                 .padding(.top, 16)
                 .frame(maxWidth: .infinity)
             }
             .background(AppColor.background)
-            .navigationTitle("Creations")
-            .task { await loadFirstProduct() }
+            .navigationTitle("Products")
+            .refreshable { await load() }
+            .task { await load() }
         }
     }
 
-    private var latestDraft: ProductDraft? {
-        if case .ready(let draft) = state.capture.phase { return draft }
-        return nil
-    }
-
-    private func firstProductCard(_ product: ProductDetail) -> some View {
+    private func productCard(_ product: StoreProduct) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(product.isPublished ? "YOUR FIRST PRODUCT · LIVE" : "YOUR FIRST PRODUCT · DRAFT")
+            Text(product.isPublished ? "LIVE" : "DRAFT")
                 .font(AppFont.mono(10, .semibold)).tracking(1.4)
                 .foregroundStyle(product.isPublished ? AppColor.success : AppColor.gold)
             Text(product.title ?? "Untitled item")
                 .font(AppFont.headline).foregroundStyle(AppColor.textPrimary)
             if let description = product.description, !description.isEmpty {
-                Text(description).font(AppFont.bodyText(13)).foregroundStyle(AppColor.textSecondary)
-                    .lineLimit(3)
+                Text(description).font(AppFont.bodyText(13))
+                    .foregroundStyle(AppColor.textSecondary).lineLimit(3)
             }
-            if let price = product.price {
-                Text("$\(price as NSDecimalNumber)")
-                    .font(AppFont.mono(15)).foregroundStyle(AppColor.gold)
+            if let priceDisplay = product.priceDisplay {
+                Text(priceDisplay).font(AppFont.mono(15)).foregroundStyle(AppColor.gold)
             }
             if !product.isPublished {
                 Button {
                     Task { await publish(product) }
                 } label: {
-                    Text(publishing ? "Publishing…" : "Publish to store")
+                    Text(publishingId == product.id ? "Publishing…" : "Publish to store")
                         .font(AppFont.buttonLabel).foregroundStyle(.black)
-                        .frame(maxWidth: .infinity).padding(.vertical, 13)
+                        .frame(maxWidth: .infinity).padding(.vertical, 12)
                         .background(AppColor.cta, in: Capsule())
                 }
-                .disabled(publishing)
-                .padding(.top, 4)
+                .disabled(publishingId != nil)
+                .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(AppColor.surface, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppColor.borderGold, lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(product.isPublished ? AppColor.border : AppColor.borderGold, lineWidth: 1)
+        )
         .padding(.horizontal, 16)
     }
 
-    private func draftCard(_ draft: ProductDraft) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("LATEST DRAFT").font(AppFont.mono(10, .semibold)).tracking(1.4)
-                .foregroundStyle(AppColor.textSecondary)
-            Text(draft.title).font(AppFont.headline).foregroundStyle(AppColor.textPrimary)
-            if let description = draft.description, !description.isEmpty {
-                Text(description).font(AppFont.bodyText(13)).foregroundStyle(AppColor.textSecondary).lineLimit(3)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 16)
-    }
-
-    private func loadFirstProduct() async {
-        guard firstProduct == nil else { return }
-        let stored = (try? await state.keychain.get(.firstProductUuid)) ?? nil
-        guard let uuid = stored, !uuid.isEmpty else { return }
+    private func load() async {
         loading = true
         defer { loading = false }
         do {
-            firstProduct = try await state.productRepository.get(uuid: uuid)
+            products = try await state.productRepository.listMine()
+            message = nil
         } catch {
-            // Non-fatal — the product still exists server-side; just not shown.
-            message = "Couldn't load your first product yet."
+            message = "Couldn't load your products. Pull to retry."
         }
     }
 
-    private func publish(_ product: ProductDetail) async {
-        publishing = true
-        defer { publishing = false }
+    private func publish(_ product: StoreProduct) async {
+        publishingId = product.id
+        defer { publishingId = nil }
         do {
-            firstProduct = try await state.productRepository.publish(uuid: product.uuid)
+            _ = try await state.productRepository.publish(uuid: product.id)
+            await load()
             message = "Published — it's live on your store."
         } catch {
             message = "Publish failed. Try again."
@@ -274,8 +255,8 @@ struct MainTabView: View {
             CircleTabView()
                 .tabItem { Label("Circle", systemImage: "person.3.fill") }
 
-            CreationsTabView()
-                .tabItem { Label("Creations", systemImage: "square.stack.fill") }
+            ProductsTabView()
+                .tabItem { Label("Products", systemImage: "bag.fill") }
 
             PageTabView()
                 .tabItem { Label("Page", systemImage: "storefront.fill") }
