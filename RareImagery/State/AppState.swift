@@ -60,6 +60,31 @@ final class AppState {
         // so cohort + funnel queries can group by `session_id`.
         Analytics.configure(client: client, sessionId: UUID().uuidString.lowercased())
         self.capture = CaptureSession()
+
+        Task { [weak self] in
+            guard let self else { return }
+            await self.client.setAuthEventHandlers(AuthEventHandlers(
+                onTokensRefreshed: { [weak self] tokens in
+                    await MainActor.run {
+                        guard let self else { return }
+                        if let claims = try? JWTDecoder.decode(tokens.accessToken) {
+                            self.session.applyRefresh(tokens: tokens, claims: claims)
+                        }
+                    }
+                },
+                onSessionInvalidated: { [weak self] in
+                    let state = await MainActor.run { self }
+                    guard let state else { return }
+                    await state.handleSessionInvalidated()
+                }
+            ))
+        }
+    }
+
+    private func handleSessionInvalidated() async {
+        try? await authService.signOut()
+        session.setSignedOut(error: "Session expired. Please sign in again.")
+        capture.reset()
     }
 
     /// Called once on app launch. Resolution order (Phase 3):
@@ -96,17 +121,42 @@ final class AppState {
     }
 
     private func tryProductionSession() async -> Bool {
+        guard let refresh = try? await keychain.get(.refreshToken), !refresh.isEmpty else {
+            return false
+        }
+
+        // Production user — never downgrade to anonymous on this path.
         do {
-            if let refresh = try await keychain.get(.refreshToken), !refresh.isEmpty,
-               let access = try await keychain.get(.accessToken) {
+            let access = try await keychain.get(.accessToken)
+            let needsRefresh: Bool
+            if let access {
+                if let claims = try? JWTDecoder.decode(access) {
+                    needsRefresh = claims.shouldRefresh()
+                } else {
+                    needsRefresh = true
+                }
+            } else {
+                needsRefresh = true
+            }
+
+            if needsRefresh {
+                let tokens = try await client.refreshTokens()
+                let claims = try JWTDecoder.decode(tokens.accessToken)
+                session.applyRefresh(tokens: tokens, claims: claims)
+            } else if let access {
                 let claims = try JWTDecoder.decode(access)
                 session.status = .signedIn(claims)
-                return true
+            } else {
+                let tokens = try await client.refreshTokens()
+                let claims = try JWTDecoder.decode(tokens.accessToken)
+                session.applyRefresh(tokens: tokens, claims: claims)
             }
+            return true
         } catch {
-            // fall through — production session unavailable, try anonymous
+            try? await authService.signOut()
+            session.setSignedOut(error: "Session expired. Please sign in again.")
+            return true
         }
-        return false
     }
 
     private func tryExistingAnonymousSession() async -> Bool {

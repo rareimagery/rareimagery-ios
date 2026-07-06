@@ -117,6 +117,14 @@ final class AuthSession {
         }
     }
 
+    /// Updates session after a silent token refresh. Unlike `apply(tokens:)`,
+    /// preserves onboarding flags (`hasSeenLivePreview`, `hasSeenFunnel`).
+    func applyRefresh(tokens: AuthTokenResponse, claims: MobileClaims) {
+        self.status = .signedIn(claims)
+        self.creator = tokens.creator ?? self.creator
+        self.lastError = nil
+    }
+
     /// Phase 3 — bootstrap into trial mode. The anonymous JWT has already
     /// been written to `.accessToken` by `AppState.bootstrapAnonymous`;
     /// this just updates the session's observable status + counter so

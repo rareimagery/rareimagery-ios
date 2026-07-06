@@ -15,13 +15,22 @@ struct RareImageryApp: App {
                 .task { await state.bootstrap() }
                 .onOpenURL { url in
                     Task {
-                        if url.scheme == "rareimagery", url.host == "auth" {
-                            do {
-                                let tokens = try await state.authService.completeXAuth(callbackURL: url)
-                                state.session.apply(tokens: tokens)
-                            } catch {
-                                state.session.setError("Deep-link auth failed: \(error)")
-                            }
+                        guard url.scheme == "rareimagery", url.host == "auth" else { return }
+                        do {
+                            let draftToken = try? await state.keychain.get(.pendingDraftToken)
+                            let draftUuid = try? await state.keychain.get(.pendingDraftUuid)
+                            let deviceId = try? await state.keychain.stableDeviceId()
+                            let tokens = try await state.authService.completeXAuth(
+                                callbackURL: url,
+                                draftToken: draftToken,
+                                draftUuid: draftUuid,
+                                deviceId: deviceId
+                            )
+                            state.session.apply(tokens: tokens)
+                            try? await state.keychain.remove(.pendingDraftToken)
+                            try? await state.keychain.remove(.pendingDraftUuid)
+                        } catch {
+                            state.session.setError("Deep-link auth failed: \(error)")
                         }
                     }
                 }
