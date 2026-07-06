@@ -41,9 +41,6 @@
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<!-- Allows HTTP to localhost (Simulator) and LAN IPs (device) for Debug
-		     builds against the local docker stack. No effect on public HTTPS;
-		     no App Store justification required for local networking. -->
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>

@@ -35,12 +35,9 @@ public struct AnonymousAuthResponse: Decodable, Sendable, Equatable {
         Date().addingTimeInterval(TimeInterval(expiresIn))
     }
 
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case expiresIn = "expires_in"
-        case tokenType = "token_type"
-        case deviceId = "device_id"
-    }
+    // No CodingKeys: APIClient decodes with .convertFromSnakeCase, which
+    // already maps access_token → accessToken etc. Explicit snake_case keys
+    // here would be double-converted and fail with keyNotFound.
 }
 
 /// iOS-side projection of the anonymous JWT's payload. We don't actually
