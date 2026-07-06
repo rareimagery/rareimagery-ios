@@ -91,7 +91,6 @@ struct ProductsTabView: View {
     @Environment(AppState.self) private var state
     @State private var products: [StoreProduct] = []
     @State private var loading = false
-    @State private var publishingId: String?
     @State private var message: String?
 
     var body: some View {
@@ -109,7 +108,13 @@ struct ProductsTabView: View {
                         .padding(.top, 60)
                     } else {
                         ForEach(products) { product in
-                            productCard(product)
+                            NavigationLink {
+                                ProductEditView(productId: product.id, onChange: { Task { await load() } })
+                                    .environment(state)
+                            } label: {
+                                productCard(product)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     if let message {
@@ -138,20 +143,16 @@ struct ProductsTabView: View {
                 Text(description).font(AppFont.bodyText(13))
                     .foregroundStyle(AppColor.textSecondary).lineLimit(3)
             }
-            if let priceDisplay = product.priceDisplay {
-                Text(priceDisplay).font(AppFont.mono(15)).foregroundStyle(AppColor.gold)
-            }
-            if !product.isPublished {
-                Button {
-                    Task { await publish(product) }
-                } label: {
-                    Text(publishingId == product.id ? "Publishing…" : "Publish to store")
-                        .font(AppFont.buttonLabel).foregroundStyle(.black)
-                        .frame(maxWidth: .infinity).padding(.vertical, 12)
-                        .background(AppColor.cta, in: Capsule())
+            HStack {
+                if let priceDisplay = product.priceDisplay {
+                    Text(priceDisplay).font(AppFont.mono(15)).foregroundStyle(AppColor.gold)
+                } else if !product.isPublished {
+                    Text("Set a price →").font(AppFont.bodyText(13)).foregroundStyle(AppColor.gold)
                 }
-                .disabled(publishingId != nil)
-                .padding(.top, 2)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(AppColor.textSecondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -175,17 +176,6 @@ struct ProductsTabView: View {
         }
     }
 
-    private func publish(_ product: StoreProduct) async {
-        publishingId = product.id
-        defer { publishingId = nil }
-        do {
-            _ = try await state.productRepository.publish(uuid: product.id)
-            await load()
-            message = "Published — it's live on your store."
-        } catch {
-            message = "Publish failed. Try again."
-        }
-    }
 }
 
 struct PageTabView: View {
