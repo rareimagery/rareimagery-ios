@@ -113,6 +113,7 @@ final class FunnelViewModel {
         }
 
         if let appState, !appState.useMocks, !frames.isEmpty {
+            var draftUuidForClip: String?
             do {
                 let deviceId = try await appState.keychain.stableDeviceId()
                 let result = try await appState.productRepository.valueAnonymously(
@@ -129,14 +130,17 @@ final class FunnelViewModel {
                     // it's the pending draft claimed at sign-in.
                     try? await appState.keychain.set(uuid, for: .pendingDraftUuid)
                 }
+                draftUuidForClip = result.draftUuid
                 valuation = FunnelValuation(from: result.draft)
             } catch {
                 errorMessage = String(describing: error)
                 os_log(.error, "funnel valuation failed: %{public}@", String(describing: error))
                 valuation = .mock
             }
-            if let url {  // raw-clip retention (CAPTURE-CONTRACT §4) — async, never blocks
-                Task { [appState] in _ = try? await appState.videoUploadRepository.upload(fileURL: url) }
+            if let url {  // capture-clip upload — async, never blocks. draftUuid (when
+                // known) links it to the product as the detail-page video; without
+                // one it's private retention (CAPTURE-CONTRACT §4).
+                Task { [appState] in _ = try? await appState.videoUploadRepository.upload(fileURL: url, draftUuid: draftUuidForClip) }
             }
         } else {
             try? await Task.sleep(for: .seconds(0.6))   // stubbed valuation (useMocks)

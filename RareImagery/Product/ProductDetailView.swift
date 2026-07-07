@@ -1,4 +1,5 @@
 import SwiftUI
+import AVKit
 import RareImageryAPI
 
 /// Public, read-only product detail page — what a visitor sees when they tap a
@@ -43,22 +44,27 @@ struct ProductDetailView: View {
     // MARK: - Hero
 
     @ViewBuilder private func hero(_ detail: ProductDetail) -> some View {
-        // Phase 2: when `detail.videoUrl` is populated, replace this AsyncImage
-        // with an AVPlayer that plays the capture clip. Until then the hero is
-        // the video frame the BFF saved onto the product.
-        AsyncImage(url: detail.heroImageUrl.flatMap { URL(string: $0) }) { phase in
-            switch phase {
-            case .success(let image): image.resizable().scaledToFill()
-            default:
-                AppColor.surface.overlay(
-                    Image(systemName: "photo").font(.system(size: 34))
-                        .foregroundStyle(AppColor.textSecondary)
-                )
+        // The capture video is the hero when present; otherwise the still frame
+        // the BFF saved onto the product. Both are 320pt tall.
+        if let videoString = detail.videoUrl, let videoURL = URL(string: videoString) {
+            VideoPlayer(player: AVPlayer(url: videoURL))
+                .frame(height: 320)
+                .frame(maxWidth: .infinity)
+        } else {
+            AsyncImage(url: detail.heroImageUrl.flatMap { URL(string: $0) }) { phase in
+                switch phase {
+                case .success(let image): image.resizable().scaledToFill()
+                default:
+                    AppColor.surface.overlay(
+                        Image(systemName: "photo").font(.system(size: 34))
+                            .foregroundStyle(AppColor.textSecondary)
+                    )
+                }
             }
+            .frame(height: 320)
+            .frame(maxWidth: .infinity)
+            .clipped()
         }
-        .frame(height: 320)
-        .frame(maxWidth: .infinity)
-        .clipped()
     }
 
     // MARK: - Content
