@@ -42,6 +42,14 @@ enum AppColor {
     // MARK: Semantic
     static let success = Color(red: 63/255, green: 185/255, blue: 80/255)
 
+    // MARK: rare-app shell (Main App Kit handoff)
+    /// #B15AD1 — active/selected purple (floating tab bar).
+    static let brandActive = Color(red: 177/255, green: 90/255, blue: 209/255)
+    /// #E2C159 — soft-gold Create-button fill on Home.
+    static let createCircle = Color(red: 226/255, green: 193/255, blue: 89/255)
+    /// #D8C4E2 — inactive tab label (canonical --color-text-secondary).
+    static let tabInactive = Color(red: 216/255, green: 196/255, blue: 226/255)
+
     // MARK: Legacy aliases (refresh-mapped)
     /// was accent #7c3aed → now brand purple
     static let accent = brand

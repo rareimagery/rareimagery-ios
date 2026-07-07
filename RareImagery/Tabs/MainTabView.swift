@@ -34,12 +34,12 @@ struct HomeTabView: View {
                             Image(systemName: "video.fill")
                                 .font(.system(size: 34, weight: .semibold))
                             Text("Create")
-                                .font(.system(size: 22, weight: .bold))
+                                .font(.system(size: 20, weight: .bold))
                         }
                         .foregroundStyle(.black)
-                        .frame(width: 180, height: 180)
-                        .background(AppColor.cta, in: Circle())
-                        .shadow(color: AppColor.cta.opacity(0.35), radius: 24, y: 8)
+                        .frame(width: 168, height: 168)
+                        .background(AppColor.createCircle, in: Circle())
+                        .shadow(color: AppColor.createCircle.opacity(0.25), radius: 20, y: 12)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Create product from video")
@@ -308,24 +308,100 @@ struct ProfileTabView: View {
     }
 }
 
-struct MainTabView: View {
-    var body: some View {
-        TabView {
-            HomeTabView()
-                .tabItem { Label("Home", systemImage: "house.fill") }
+/// The five app tabs. Icons are outline SF Symbols matching the handoff's
+/// Lucide set (home / users / shopping-bag / store / circle-user-round).
+enum RareTab: CaseIterable {
+    case home, circle, products, page, profile
 
-            CircleTabView()
-                .tabItem { Label("Circle", systemImage: "person.3.fill") }
-
-            ProductsTabView()
-                .tabItem { Label("Products", systemImage: "bag.fill") }
-
-            PageTabView()
-                .tabItem { Label("Page", systemImage: "storefront.fill") }
-
-            ProfileTabView()
-                .tabItem { Label("Profile", systemImage: "person.circle.fill") }
+    var label: String {
+        switch self {
+        case .home: "Home"
+        case .circle: "Circle"
+        case .products: "Products"
+        case .page: "Page"
+        case .profile: "Profile"
         }
-        .tint(AppColor.accent)
+    }
+
+    var icon: String {
+        switch self {
+        case .home: "house"
+        case .circle: "person.3"
+        case .products: "bag"
+        case .page: "storefront"
+        case .profile: "person.crop.circle"
+        }
+    }
+}
+
+/// Floating rounded-capsule bottom nav (rare-app Main App Kit): #2C1033 fill,
+/// hairline border, active tab in bright purple with a subtle highlight pill.
+struct RareTabBar: View {
+    @Binding var selected: RareTab
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(RareTab.allCases, id: \.self) { tab in
+                let isOn = selected == tab
+                Button {
+                    selected = tab
+                } label: {
+                    VStack(spacing: 4) {
+                        ZStack {
+                            if isOn {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white.opacity(0.07))
+                                    .frame(width: 46, height: 32)
+                            }
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 20, weight: .regular))
+                                .foregroundStyle(isOn ? AppColor.brandActive : .white)
+                        }
+                        .frame(height: 32)
+                        Text(tab.label)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(isOn ? AppColor.brandActive : AppColor.tabInactive)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tab.label)
+            }
+        }
+        .padding(8)
+        .background(AppColor.vaultMid, in: RoundedRectangle(cornerRadius: 30))
+        .overlay(RoundedRectangle(cornerRadius: 30).stroke(Color.white.opacity(0.08), lineWidth: 1))
+        .shadow(color: Color(red: 5/255, green: 3/255, blue: 8/255).opacity(0.5), radius: 15, y: 10)
+        .padding(.horizontal, 14)
+        .padding(.bottom, 18)
+    }
+}
+
+struct MainTabView: View {
+    @State private var tab: RareTab = .home
+
+    var body: some View {
+        ZStack {
+            AppColor.background.ignoresSafeArea()
+            // Lazy: each tab mounts on first visit (loads its own data) rather
+            // than all five at launch. Re-visiting a tab reloads it — fine for
+            // a thin client. The floating bar insets each tab's safe area so
+            // scroll content clears it.
+            content
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    RareTabBar(selected: $tab)
+                }
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        switch tab {
+        case .home: HomeTabView()
+        case .circle: CircleTabView()
+        case .products: ProductsTabView()
+        case .page: PageTabView()
+        case .profile: ProfileTabView()
+        }
     }
 }
