@@ -229,7 +229,13 @@ struct PageTabView: View {
         } else {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 ForEach(published) { product in
-                    storeCard(product)
+                    NavigationLink {
+                        ProductDetailView(productId: product.id)
+                            .environment(state)
+                    } label: {
+                        storeCard(product)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 16)

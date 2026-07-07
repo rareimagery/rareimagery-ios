@@ -81,6 +81,7 @@
 		E71D3C94F745511E66F61C59 /* AuthCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDEF011E42BC89A2AEE3A2F /* AuthCoordinator.swift */; };
 		EAE861C43B638428B42A8593 /* ProductTypeChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = 348E9B75C62023008547FED0 /* ProductTypeChips.swift */; };
 		EC5D7ACA7A9F4CF512195421 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0A5458DE40A2EFD3ED1414 /* Typography.swift */; };
+		EC759762F276D641F46958C1 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 370A769C969C707312A36EB2 /* ProductDetailView.swift */; };
 		F43411980D8104D8D2321A35 /* MerchProductKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = 567D6688D4E093F76A2024E2 /* MerchProductKind.swift */; };
 		F74395B8DD96A103FC91709E /* FilmstripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2532634375654F57EC0478B0 /* FilmstripView.swift */; };
 		F902970DFE83FD456C7AE7FD /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C71612A5C1509ABC115C979 /* ContentView.swift */; };
@@ -119,6 +120,7 @@
 		311934CBAAD314C67769DDF2 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		32DE531B59408CBED417C215 /* ProductEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductEditView.swift; sourceTree = "<group>"; };
 		348E9B75C62023008547FED0 /* ProductTypeChips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductTypeChips.swift; sourceTree = "<group>"; };
+		370A769C969C707312A36EB2 /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
 		3C0A5458DE40A2EFD3ED1414 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		3DEC95B4370EFA322DDAFE13 /* OnePageCreatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnePageCreatorView.swift; sourceTree = "<group>"; };
 		40A8DFC7F4711701D20028E3 /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
@@ -393,6 +395,7 @@
 		B251D13FD22C87106551775A /* Product */ = {
 			isa = PBXGroup;
 			children = (
+				370A769C969C707312A36EB2 /* ProductDetailView.swift */,
 				32DE531B59408CBED417C215 /* ProductEditView.swift */,
 				E61770B5221B245BDB58DFFF /* QuickProductView.swift */,
 			);
@@ -646,6 +649,7 @@
 				29C512BDC275C785EF45866F /* OnePageCreatorView.swift in Sources */,
 				652C3E7B167A048FB01B420F /* OnePageCreatorViewModel.swift in Sources */,
 				CD7F15CA32FBBCEEF305A775 /* PermissionsView.swift in Sources */,
+				EC759762F276D641F46958C1 /* ProductDetailView.swift in Sources */,
 				CED6E627BF86B84BEDA630FC /* ProductEditView.swift in Sources */,
 				EAE861C43B638428B42A8593 /* ProductTypeChips.swift in Sources */,
 				C90812DF156F41556598029A /* QuestionCard.swift in Sources */,
