@@ -324,9 +324,17 @@ struct ProfileTabView: View {
                     }
                 }
 
-                // The public storefront preview left the tab bar (Products
-                // took its slot); it stays reachable from here.
+                // Store sales system — orders, revenue, shipping (read-only,
+                // from Drupal Commerce via /api/sales/*).
                 Section {
+                    NavigationLink {
+                        SalesDashboardView()
+                            .environment(state)
+                    } label: {
+                        Label("Sales", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+                    // The public storefront preview left the tab bar (Products
+                    // took its slot); it stays reachable from here.
                     NavigationLink {
                         PageTabView()
                             .environment(state)
