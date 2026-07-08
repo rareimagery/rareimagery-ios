@@ -6,6 +6,10 @@ import RareImageryAPI
 /// the pitch card, and the gold "Start Sniffing" circle that launches the
 /// video → Grok create flow.
 struct HomeTabView: View {
+    /// Called after "Add to store" so MainTabView can switch to the Products
+    /// tab, where the fresh draft shows as UNPUBLISHED.
+    var onProductCreated: (() -> Void)? = nil
+
     @Environment(AppState.self) private var state
     @State private var showVideoCreate = false
 
@@ -79,8 +83,15 @@ struct HomeTabView: View {
             }
         }
         .fullScreenCover(isPresented: $showVideoCreate) {
-            VideoSubmissionFunnelView(onExit: { showVideoCreate = false }, productMode: true)
-                .environment(state)
+            VideoSubmissionFunnelView(
+                onExit: { showVideoCreate = false },
+                productMode: true,
+                onProductAdded: {
+                    showVideoCreate = false
+                    onProductCreated?()
+                }
+            )
+            .environment(state)
         }
     }
 }
@@ -164,7 +175,7 @@ struct ProductsTabView: View {
 
     private func productCard(_ product: StoreProduct) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(product.isPublished ? "LIVE" : "DRAFT")
+            Text(product.isPublished ? "LIVE" : "UNPUBLISHED")
                 .font(AppFont.mono(10, .semibold)).tracking(1.4)
                 .foregroundStyle(product.isPublished ? AppColor.success : AppColor.gold)
             Text(product.title ?? "Untitled item")
@@ -199,7 +210,28 @@ struct ProductsTabView: View {
         loading = true
         defer { loading = false }
         do {
-            products = try await state.productRepository.listMine()
+            var list = try await state.productRepository.listMine()
+            // A just-created draft can be missing from the server list (e.g.
+            // its creator claim failed or the index lags). The funnel stashes
+            // its uuid — surface that draft here anyway so it's never lost.
+            if let pending = try? await state.keychain.get(.pendingDraftUuid), !pending.isEmpty {
+                if list.contains(where: { $0.id == pending }) {
+                    // Visible through the normal list now — stop tracking it.
+                    try? await state.keychain.remove(.pendingDraftUuid)
+                } else if let detail = try? await state.productRepository.get(uuid: pending) {
+                    list.insert(StoreProduct(
+                        id: detail.uuid,
+                        title: detail.title,
+                        description: detail.description,
+                        price: detail.price.map { "\($0 as NSDecimalNumber)" },
+                        currency: "USD",
+                        imageUrl: detail.heroImageUrl,
+                        productType: nil,
+                        status: detail.isPublished ? 1 : 0
+                    ), at: 0)
+                }
+            }
+            products = list
             message = nil
         } catch {
             message = "Couldn't load your products. Pull to retry."
@@ -516,7 +548,7 @@ struct MainTabView: View {
 
     @ViewBuilder private var content: some View {
         switch tab {
-        case .home: HomeTabView()
+        case .home: HomeTabView(onProductCreated: { tab = .products })
         case .friends: FriendsTabView()
         case .products: ProductsTabView()
         case .profile: ProfileTabView()

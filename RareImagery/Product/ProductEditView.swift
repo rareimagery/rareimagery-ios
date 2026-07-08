@@ -87,7 +87,7 @@ struct ProductEditView: View {
     }
 
     private var statusBadge: some View {
-        Text(isPublished ? "LIVE ON STORE" : "DRAFT")
+        Text(isPublished ? "LIVE ON STORE" : "UNPUBLISHED")
             .font(AppFont.mono(10, .semibold)).tracking(1.4)
             .foregroundStyle(isPublished ? AppColor.success : AppColor.gold)
     }

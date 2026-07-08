@@ -15,6 +15,10 @@ struct VideoSubmissionFunnelView: View {
     /// value call is authenticated (BFF binds the draft to the creator),
     /// and the result CTA becomes "Add to store" instead of "Claim with X".
     var productMode: Bool = false
+    /// Product mode: called by the result screen's "Add to store" so the
+    /// host can close the flow AND land the user on the Products screen
+    /// (where the new draft shows as UNPUBLISHED). Falls back to onExit.
+    var onProductAdded: (() -> Void)? = nil
     @State private var vm = FunnelViewModel()
     @Environment(AppState.self) private var state
 
@@ -32,6 +36,7 @@ struct VideoSubmissionFunnelView: View {
         .task {
             vm.appState = state
             vm.productMode = productMode
+            vm.onProductAdded = onProductAdded
             await vm.prepareCamera()
         }
     }
@@ -50,6 +55,8 @@ final class FunnelViewModel {
     /// Set by VideoSubmissionFunnelView when used for signed-in product
     /// creation (authenticated value call + "Add to store" result CTA).
     var productMode = false
+    /// Product mode: "Add to store" handler (close + show Products screen).
+    var onProductAdded: (() -> Void)?
     let capture = VideoCaptureService()
 
     let prompts = ["What is it?", "How old is it?", "Any flaws or wear?",

@@ -17,6 +17,21 @@ public struct StoreProduct: Codable, Sendable, Equatable, Identifiable {
 
     public var isPublished: Bool { status == 1 }
 
+    /// Memberwise init (the custom `init(from:)` suppresses the synthesized
+    /// one). Used to surface a pending draft fetched via ProductDetail when
+    /// the server list hasn't caught up (e.g. a failed claim).
+    public init(id: String, title: String?, description: String?, price: String?,
+                currency: String?, imageUrl: String?, productType: String?, status: Int?) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.price = price
+        self.currency = currency
+        self.imageUrl = imageUrl
+        self.productType = productType
+        self.status = status
+    }
+
     public var priceDisplay: String? {
         guard let price, let value = Decimal(string: price) else { return nil }
         return "$\(value as NSDecimalNumber)"

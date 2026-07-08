@@ -68,11 +68,11 @@ struct FunnelResultView: View {
 
                         if vm.productMode {
                             // Signed-in product creation: the draft is already
-                            // created + owned by the BFF. This just closes the
-                            // flow back to the store, where it's an editable
-                            // product (review + publish).
+                            // created + owned by the BFF. Close the flow AND
+                            // land on the Products screen, where the draft
+                            // shows as UNPUBLISHED and is editable/publishable.
                             FunnelGoldButton(title: "Add to store") {
-                                onExit?()
+                                (vm.onProductAdded ?? onExit)?()
                             }
                         } else {
                             FunnelGoldButton(title: authing ? "Connecting to X…" : (state.session.isAnonymous ? "Claim this draft" : "Create your store to sell")) {
