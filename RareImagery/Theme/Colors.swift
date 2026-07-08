@@ -68,4 +68,15 @@ extension AppColor {
         colors: [Color(red: 244/255, green: 229/255, blue: 166/255), gold, gold700],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
+    /// "Spotlight" surface — bright purple top → vault bottom
+    /// (#4A1D57 → #2A0E33 → #0C060F). The Home/create-flow surface,
+    /// distinct from the flat vault used by the rest of the app.
+    static let spotlight = LinearGradient(
+        stops: [
+            .init(color: Color(red: 74/255, green: 29/255, blue: 87/255), location: 0),
+            .init(color: Color(red: 42/255, green: 14/255, blue: 51/255), location: 0.55),
+            .init(color: Color(red: 12/255, green: 6/255, blue: 15/255), location: 1),
+        ],
+        startPoint: .top, endPoint: .bottom
+    )
 }

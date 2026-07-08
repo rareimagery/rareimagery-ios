@@ -1,92 +1,123 @@
 import SwiftUI
 import RareImageryAPI
 
+/// Home — the rare-create Intro screen (ui_kits/rare-create): spotlight
+/// gradient, the Rare / Bud / Imagery lockup inside gold viewfinder brackets,
+/// the pitch card, and the gold "Start Sniffing" circle that launches the
+/// video → Grok create flow.
 struct HomeTabView: View {
     @Environment(AppState.self) private var state
     @State private var showVideoCreate = false
-    @State private var showPhotoCapture = false
-    @State private var showOnePageCreator = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppColor.background.ignoresSafeArea()
+        ZStack {
+            AppColor.spotlight.ignoresSafeArea()
 
-                VStack(spacing: 28) {
-                    Spacer()
+            ScrollView {
+                VStack(spacing: 0) {
+                    Text("Ready to sniff something Rare? 🐾")
+                        .font(AppFont.display(20, .bold))
+                        .italic()
+                        .foregroundStyle(AppColor.gold)
+                        .padding(.top, 18)
 
-                    VStack(spacing: 10) {
-                        Text("Add a product")
-                            .font(AppFont.largeTitle)
+                    Text("Rare")
+                        .font(AppFont.display(38, .bold))
+                        .foregroundStyle(AppColor.textPrimary)
+                        .padding(.top, 18)
+
+                    Image("BudHound")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 250, height: 250)
+                        .overlay(ViewfinderBrackets())
+                        .padding(.top, 22)
+
+                    Text("Imagery")
+                        .font(AppFont.display(40, .bold))
+                        .foregroundStyle(AppColor.textPrimary)
+                        .padding(.top, 6)
+
+                    // Pitch card — gold hairline + wash
+                    HStack(alignment: .center, spacing: 14) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 22))
+                            .foregroundStyle(AppColor.gold)
+                        Text("Film your product and talk about it — Rare builds the whole listing from your video and voice.")
+                            .font(AppFont.bodyText(15))
                             .foregroundStyle(AppColor.textPrimary)
-                        Text("Film it — Grok drafts the whole listing.")
-                            .font(AppFont.callout)
-                            .foregroundStyle(AppColor.textSecondary)
+                            .lineSpacing(3)
                     }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 16)
+                    .background(AppColor.gold.opacity(0.06), in: RoundedRectangle(cornerRadius: 20))
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(AppColor.gold.opacity(0.5), lineWidth: 1))
+                    .padding(.top, 22)
 
-                    // Primary = the SAME video → Grok Vision flow as sign-up.
-                    // Authenticated, so the BFF binds the resulting draft to
-                    // this creator (owned, editable product in their store).
+                    // The create CTA — same video → Grok Vision flow as sign-up;
+                    // authenticated, so the draft lands owned in their store.
                     Button {
                         showVideoCreate = true
                     } label: {
-                        VStack(spacing: 10) {
+                        VStack(spacing: 6) {
                             Image(systemName: "video.fill")
-                                .font(.system(size: 34, weight: .semibold))
-                            Text("Create")
-                                .font(.system(size: 20, weight: .bold))
+                                .font(.system(size: 28, weight: .semibold))
+                            Text("Start Sniffing")
+                                .font(AppFont.display(15, .bold))
                         }
-                        .foregroundStyle(.black)
-                        .frame(width: 168, height: 168)
+                        .foregroundStyle(Color(red: 22/255, green: 13/255, blue: 26/255))
+                        .frame(width: 128, height: 128)
                         .background(AppColor.createCircle, in: Circle())
                         .shadow(color: AppColor.createCircle.opacity(0.25), radius: 20, y: 12)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Create product from video")
-
-                    VStack(spacing: 6) {
-                        Button {
-                            showPhotoCapture = true
-                        } label: {
-                            Text("Use photos instead")
-                                .font(AppFont.bodyText(14))
-                                .foregroundStyle(AppColor.textSecondary)
-                        }
-                        Button {
-                            showOnePageCreator = true
-                        } label: {
-                            Text("Design merch instead")
-                                .font(AppFont.bodyText(14))
-                                .foregroundStyle(AppColor.textSecondary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    Spacer()
-                    Spacer()
+                    .accessibilityLabel("Start filming your product")
+                    .padding(.top, 24)
+                    .padding(.bottom, 24)
                 }
+                .padding(.horizontal, 20)
             }
-            .navigationTitle("Home")
-            .navigationBarTitleDisplayMode(.inline)
-            .fullScreenCover(isPresented: $showVideoCreate) {
-                VideoSubmissionFunnelView(onExit: { showVideoCreate = false }, productMode: true)
-                    .environment(state)
-            }
-            .fullScreenCover(isPresented: $showPhotoCapture) {
-                FirstProductFlowView()
-                    .environment(state)
-            }
-            .fullScreenCover(isPresented: $showOnePageCreator) {
-                OnePageCreatorHostView()
-                    .environment(state)
-            }
+        }
+        .fullScreenCover(isPresented: $showVideoCreate) {
+            VideoSubmissionFunnelView(onExit: { showVideoCreate = false }, productMode: true)
+                .environment(state)
         }
     }
 }
 
-/// Products tab — every product the signed-in creator has made (drafts +
-/// live), from GET /api/stores/products. Unpublished drafts get a Publish
-/// action inline; this is where the pre-sign-in funnel video also lands.
+/// Gold viewfinder corner brackets (26pt arms, 3pt stroke) framing Bud.
+private struct ViewfinderBrackets: View {
+    var body: some View {
+        GeometryReader { geo in
+            let L: CGFloat = 26, T: CGFloat = 3, r: CGFloat = 6
+            let w = geo.size.width, h = geo.size.height
+            Path { p in
+                // tl
+                p.move(to: CGPoint(x: 0, y: L)); p.addLine(to: CGPoint(x: 0, y: r))
+                p.addQuadCurve(to: CGPoint(x: r, y: 0), control: .zero)
+                p.addLine(to: CGPoint(x: L, y: 0))
+                // tr
+                p.move(to: CGPoint(x: w - L, y: 0)); p.addLine(to: CGPoint(x: w - r, y: 0))
+                p.addQuadCurve(to: CGPoint(x: w, y: r), control: CGPoint(x: w, y: 0))
+                p.addLine(to: CGPoint(x: w, y: L))
+                // bl
+                p.move(to: CGPoint(x: 0, y: h - L)); p.addLine(to: CGPoint(x: 0, y: h - r))
+                p.addQuadCurve(to: CGPoint(x: r, y: h), control: CGPoint(x: 0, y: h))
+                p.addLine(to: CGPoint(x: L, y: h))
+                // br
+                p.move(to: CGPoint(x: w - L, y: h)); p.addLine(to: CGPoint(x: w - r, y: h))
+                p.addQuadCurve(to: CGPoint(x: w, y: h - r), control: CGPoint(x: w, y: h))
+                p.addLine(to: CGPoint(x: w, y: h - L))
+            }
+            .stroke(AppColor.gold, lineWidth: T)
+        }
+    }
+}
+
+/// My products — every product the signed-in creator has made (drafts +
+/// live), from GET /api/stores/products. Left the tab bar in the rare-create
+/// nav rework; now pushed from Profile → "My products" (so it renders inside
+/// the presenting NavigationStack rather than owning one).
 struct ProductsTabView: View {
     @Environment(AppState.self) private var state
     @State private var products: [StoreProduct] = []
@@ -94,7 +125,6 @@ struct ProductsTabView: View {
     @State private var message: String?
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 14) {
                     if loading && products.isEmpty {
@@ -126,10 +156,9 @@ struct ProductsTabView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(AppColor.background)
-            .navigationTitle("Products")
+            .navigationTitle("My products")
             .refreshable { await load() }
             .task { await load() }
-        }
     }
 
     private func productCard(_ product: StoreProduct) -> some View {
@@ -295,6 +324,17 @@ struct ProfileTabView: View {
                     }
                 }
 
+                // Products management left the tab bar (rare-create nav);
+                // drafts + publish stay reachable from here.
+                Section {
+                    NavigationLink {
+                        ProductsTabView()
+                            .environment(state)
+                    } label: {
+                        Label("My products", systemImage: "bag")
+                    }
+                }
+
                 Section {
                     Button("Sign out", role: .destructive) {
                         Task { await state.signOut() }
@@ -308,67 +348,63 @@ struct ProfileTabView: View {
     }
 }
 
-/// The five app tabs. The pfp/Profile button leads the bar; Circle became
-/// Friends (your X follows + their stores). Icons are outline SF Symbols
-/// matching the handoff's Lucide set.
+/// The four capsule tabs (rare-create kit): the branded Bud "RareImagery"
+/// home tab, Friends, Page, Profile — with the Shop button in the center.
+/// Products management moved off the bar (reachable from Profile).
 enum RareTab: CaseIterable {
-    case profile, home, friends, products, page
+    case home, friends, page, profile
 
     var label: String {
         switch self {
-        case .profile: "Profile"
-        case .home: "Home"
+        case .home: "RareImagery"
         case .friends: "Friends"
-        case .products: "Products"
         case .page: "Page"
+        case .profile: "Profile"
         }
     }
 
     var icon: String {
         switch self {
-        case .profile: "person.crop.circle"
-        case .home: "house"
+        case .home: "house"           // fallback only — home renders Bud
         case .friends: "person.2"
-        case .products: "bag"
         case .page: "storefront"
+        case .profile: "person.crop.circle"
         }
     }
 }
 
-/// Floating rounded-capsule bottom nav (rare-app Main App Kit): #2C1033 fill,
-/// hairline border, active tab in bright purple with a subtle highlight pill.
-/// The Profile button renders the signed-in creator's X avatar when available.
+/// Floating rounded-capsule bottom nav (rare-create kit): #2C1033 fill,
+/// hairline border, active tab bright purple with a subtle highlight pill.
+/// Home renders the Bud mascot; Profile renders the creator's X avatar; the
+/// center slot is the transparent Shop button (bag icon, lowercase label).
 struct RareTabBar: View {
     @Binding var selected: RareTab
     var avatarURL: URL?
+    var onShop: () -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(RareTab.allCases, id: \.self) { tab in
-                let isOn = selected == tab
-                Button {
-                    selected = tab
-                } label: {
-                    VStack(spacing: 4) {
-                        ZStack {
-                            if isOn {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.white.opacity(0.07))
-                                    .frame(width: 46, height: 32)
-                            }
-                            tabIcon(tab, isOn: isOn)
-                        }
-                        .frame(height: 32)
-                        Text(tab.label)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(isOn ? AppColor.brandActive : AppColor.tabInactive)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+        HStack(spacing: 4) {
+            tabButton(.home)
+            tabButton(.friends)
+
+            // Center — Shop (transparent variant: 34pt icon, muted label)
+            Button(action: onShop) {
+                VStack(spacing: 3) {
+                    Image(systemName: "bag")
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(AppColor.tabInactive)
+                        .frame(width: 34, height: 34)
+                    Text("shop")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppColor.tabInactive)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(tab.label)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Shop creator stores")
+
+            tabButton(.page)
+            tabButton(.profile)
         }
         .padding(8)
         .background(AppColor.vaultMid, in: RoundedRectangle(cornerRadius: 30))
@@ -378,21 +414,61 @@ struct RareTabBar: View {
         .padding(.bottom, 18)
     }
 
-    @ViewBuilder private func tabIcon(_ tab: RareTab, isOn: Bool) -> some View {
-        if tab == .profile, let avatarURL {
-            AsyncImage(url: avatarURL) { phase in
-                switch phase {
-                case .success(let image): image.resizable().scaledToFill()
-                default:
-                    Image(systemName: tab.icon)
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(isOn ? AppColor.brandActive : .white)
+    private func tabButton(_ tab: RareTab) -> some View {
+        let isOn = selected == tab
+        return Button {
+            selected = tab
+        } label: {
+            VStack(spacing: 4) {
+                ZStack {
+                    if isOn {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.07))
+                            .frame(width: 52, height: 30)
+                    }
+                    tabIcon(tab, isOn: isOn)
                 }
+                .frame(height: 32)
+                Text(tab.label)
+                    .font(.system(size: 11, weight: isOn ? .semibold : .regular))
+                    .foregroundStyle(isOn ? AppColor.brandActive : AppColor.tabInactive)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .frame(width: 26, height: 26)
-            .clipShape(Circle())
-            .overlay(Circle().stroke(isOn ? AppColor.brandActive : Color.white.opacity(0.25), lineWidth: isOn ? 2 : 1))
-        } else {
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(tab.label)
+    }
+
+    @ViewBuilder private func tabIcon(_ tab: RareTab, isOn: Bool) -> some View {
+        switch tab {
+        case .home:
+            Image("BudHound")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 30, height: 30)
+        case .profile:
+            if let avatarURL {
+                AsyncImage(url: avatarURL) { phase in
+                    switch phase {
+                    case .success(let image): image.resizable().scaledToFill()
+                    default:
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 20, weight: .regular))
+                            .foregroundStyle(isOn ? AppColor.brandActive : .white)
+                    }
+                }
+                .frame(width: 24, height: 24)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(isOn ? AppColor.brandActive : Color.white.opacity(0.25), lineWidth: isOn ? 2 : 1))
+            } else {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(isOn ? AppColor.brandActive : .white)
+            }
+        default:
             Image(systemName: tab.icon)
                 .font(.system(size: 20, weight: .regular))
                 .foregroundStyle(isOn ? AppColor.brandActive : .white)
@@ -404,18 +480,22 @@ struct MainTabView: View {
     @Environment(AppState.self) private var state
     @State private var tab: RareTab = .home
     @State private var avatarURL: URL?
+    @State private var showShop = false
 
     var body: some View {
         ZStack {
             AppColor.background.ignoresSafeArea()
             // Lazy: each tab mounts on first visit (loads its own data) rather
-            // than all five at launch. Re-visiting a tab reloads it — fine for
-            // a thin client. The floating bar insets each tab's safe area so
-            // scroll content clears it.
+            // than all at launch. The floating bar insets each tab's safe area
+            // so scroll content clears it.
             content
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    RareTabBar(selected: $tab, avatarURL: avatarURL)
+                    RareTabBar(selected: $tab, avatarURL: avatarURL, onShop: { showShop = true })
                 }
+        }
+        .sheet(isPresented: $showShop) {
+            ShopView()
+                .environment(state)
         }
         .task {
             // Pfp for the Profile tab button — best-effort; falls back to the
@@ -426,11 +506,10 @@ struct MainTabView: View {
 
     @ViewBuilder private var content: some View {
         switch tab {
-        case .profile: ProfileTabView()
         case .home: HomeTabView()
         case .friends: FriendsTabView()
-        case .products: ProductsTabView()
         case .page: PageTabView()
+        case .profile: ProfileTabView()
         }
     }
 }
