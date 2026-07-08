@@ -2,9 +2,12 @@
 build/
 DerivedData/
 # RareImagery.xcodeproj IS committed (xcodegen-generated) so Xcode Cloud can
-# resolve the project + shared scheme from the git tree. project.yml stays the
-# source of truth: regenerate with `xcodegen generate` and commit the diff,
-# never hand-edit the pbxproj. Only per-user cruft below is ignored.
+# resolve the project + shared scheme from the git tree at plan time —
+# ci_post_clone.sh regenerates it on CI as a freshness step, but a runtime
+# regenerate alone can't satisfy plan-time resolution, so committing is load-
+# bearing. project.yml stays the source of truth: regenerate with
+# `xcodegen generate` and commit the diff, never hand-edit the pbxproj. Only
+# per-user cruft below is ignored.
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
@@ -44,3 +47,4 @@ Configuration/*.local.xcconfig
 
 ## macOS junk
 .DS_Store
+graphify-out/

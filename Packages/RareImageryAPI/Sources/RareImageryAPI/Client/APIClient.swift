@@ -7,18 +7,31 @@ public actor APIClient {
     private let logger = APILogger(category: "APIClient")
 
     private var refreshTask: Task<AuthTokenResponse, Error>?
+    private var authEventHandlers = AuthEventHandlers()
 
-    public init(configuration: APIConfiguration, keychain: KeychainStore) {
+    public init(
+        configuration: APIConfiguration,
+        keychain: KeychainStore,
+        urlSession: URLSession? = nil
+    ) {
         self.configuration = configuration
         self.keychain = keychain
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 60
-        config.waitsForConnectivity = true
-        self.session = URLSession(configuration: config)
+        if let urlSession {
+            self.session = urlSession
+        } else {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 30
+            config.timeoutIntervalForResource = 60
+            config.waitsForConnectivity = true
+            self.session = URLSession(configuration: config)
+        }
     }
 
     public var config: APIConfiguration { configuration }
+
+    public func setAuthEventHandlers(_ handlers: AuthEventHandlers) {
+        authEventHandlers = handlers
+    }
 
     public func send<Response: Decodable>(
         _ endpoint: APIEndpoint,
@@ -35,11 +48,22 @@ public actor APIClient {
         if http.statusCode == 401 && endpoint.requiresAuth && retryOn401 {
             logger.info("401 received — attempting token refresh and single retry")
             do {
-                _ = try await refreshTokens()
+                _ = try await refreshWithInvalidationOnFailure()
             } catch {
                 throw APIError.unauthorized
             }
-            return try await send(endpoint, as: Response.self, retryOn401: false)
+            let (retryData, retryResponse) = try await perform(
+                try await buildRequest(for: endpoint),
+                timeout: endpoint.timeout
+            )
+            guard let retryHTTP = retryResponse as? HTTPURLResponse else {
+                throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
+            }
+            if retryHTTP.statusCode == 401 {
+                await invokeSessionInvalidated()
+                throw APIError.unauthorized
+            }
+            return try Self.decodeResponse(data: retryData, response: retryHTTP)
         }
 
         return try Self.decodeResponse(data: data, response: http)
@@ -53,8 +77,24 @@ public actor APIClient {
             throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
         }
         if http.statusCode == 401 && endpoint.requiresAuth && retryOn401 {
-            _ = try await refreshTokens()
-            return try await sendRaw(endpoint, retryOn401: false)
+            do {
+                _ = try await refreshWithInvalidationOnFailure()
+            } catch {
+                throw APIError.unauthorized
+            }
+            let (retryData, retryResponse) = try await perform(
+                try await buildRequest(for: endpoint),
+                timeout: endpoint.timeout
+            )
+            guard let retryHTTP = retryResponse as? HTTPURLResponse else {
+                throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
+            }
+            if retryHTTP.statusCode == 401 {
+                await invokeSessionInvalidated()
+                throw APIError.unauthorized
+            }
+            try Self.throwIfError(data: retryData, response: retryHTTP)
+            return retryData
         }
         try Self.throwIfError(data: data, response: http)
         return data
@@ -72,6 +112,15 @@ public actor APIClient {
         }
         refreshTask = task
         return try await task.value
+    }
+
+    private func refreshWithInvalidationOnFailure() async throws -> AuthTokenResponse {
+        do {
+            return try await refreshTokens()
+        } catch {
+            await invokeSessionInvalidated()
+            throw error
+        }
     }
 
     private func performRefresh() async throws -> AuthTokenResponse {
@@ -92,6 +141,9 @@ public actor APIClient {
         }
         let tokens: AuthTokenResponse = try Self.decodeResponse(data: data, response: http)
         try await persist(tokens)
+        if let handler = authEventHandlers.onTokensRefreshed {
+            await handler(tokens)
+        }
         return tokens
     }
 
@@ -109,6 +161,10 @@ public actor APIClient {
     // MARK: - Internal request building
 
     private func buildRequest(for endpoint: APIEndpoint) async throws -> URLRequest {
+        if endpoint.requiresAuth {
+            try await ensureFreshAccessToken()
+        }
+
         var components = URLComponents(url: configuration.baseURL.appendingPathComponent(endpoint.path), resolvingAgainstBaseURL: false)
         if !endpoint.queryItems.isEmpty { components?.queryItems = endpoint.queryItems }
         guard let url = components?.url else {
@@ -131,6 +187,33 @@ public actor APIClient {
             }
         }
         return request
+    }
+
+    /// Proactive refresh per CLAUDE.md §2.3 — refresh 60 s before access expiry.
+    /// No-op for anonymous sessions (no refresh token).
+    private func ensureFreshAccessToken() async throws {
+        guard let refresh = try await keychain.get(.refreshToken), !refresh.isEmpty else {
+            return
+        }
+        guard let access = try await keychain.get(.accessToken) else {
+            _ = try await refreshWithInvalidationOnFailure()
+            return
+        }
+        let needsRefresh: Bool
+        if let claims = try? JWTDecoder.decode(access) {
+            needsRefresh = claims.shouldRefresh()
+        } else {
+            needsRefresh = true
+        }
+        if needsRefresh {
+            _ = try await refreshWithInvalidationOnFailure()
+        }
+    }
+
+    private func invokeSessionInvalidated() async {
+        if let handler = authEventHandlers.onSessionInvalidated {
+            await handler()
+        }
     }
 
     private func perform(_ request: URLRequest, timeout: TimeInterval?) async throws -> (Data, URLResponse) {

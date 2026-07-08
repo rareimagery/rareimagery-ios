@@ -25,8 +25,12 @@ public actor AuthService {
 
     /// Returns the URL to open in ASWebAuthenticationSession plus the callback scheme to listen for.
     public func startXAuth(scopes: [String] = ["tweet.read", "users.read", "offline.access"]) throws -> OAuthRequest {
-        guard !configuration.xClientID.isEmpty else {
-            throw APIError.invalidConfiguration("XClientID is empty — set XClientID in xcconfig / Info.plist")
+        guard configuration.isXClientIDConfigured else {
+            throw APIError.invalidConfiguration(
+                "X OAuth Client ID is not set. Copy Configuration/Debug.local.xcconfig.example " +
+                "to Debug.local.xcconfig and paste your X app's OAuth 2.0 Client ID " +
+                "(developer.x.com → your app → Keys and tokens). The BFF needs the matching secret."
+            )
         }
         let verifier = PKCE.generateVerifier()
         let challenge = PKCE.challenge(for: verifier)
@@ -56,7 +60,17 @@ public actor AuthService {
 
     /// Process the callback URL returned by ASWebAuthenticationSession.
     /// Extracts the code, validates state, and exchanges via AuthRepository.
-    public func completeXAuth(callbackURL: URL) async throws -> AuthTokenResponse {
+    /// If `draftToken` is non-nil it is forwarded to the x/callback for claim
+    /// handoff (legacy authenticated-analyze path). `draftUuid` and
+    /// `deviceId` are the current, additive contract for claiming a draft
+    /// produced by the anonymous `/api/v1/vision/value` endpoint — both
+    /// optional and independent of `draftToken`.
+    public func completeXAuth(
+        callbackURL: URL,
+        draftToken: String? = nil,
+        draftUuid: String? = nil,
+        deviceId: String? = nil
+    ) async throws -> AuthTokenResponse {
         guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false) else {
             throw APIError.authFailed("Malformed callback URL")
         }
@@ -83,7 +97,10 @@ public actor AuthService {
         let tokens = try await repository.completeOAuth(
             code: code,
             codeVerifier: verifier,
-            redirectURI: configuration.redirectURI
+            redirectURI: configuration.redirectURI,
+            draftToken: draftToken,
+            draftUuid: draftUuid,
+            deviceId: deviceId
         )
         try await client.persist(tokens)
         logger.info("X OAuth complete — token persisted")

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AuthenticationServices
 import RareImageryAPI
 
@@ -7,15 +8,33 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
 
     private let logger = APILogger(category: "AuthCoordinator")
 
-    func signInWithX(state: AppState) async {
+    func signInWithX(state: AppState, draftToken: String? = nil, draftUuid: String? = nil) async {
         do {
             let request = try await state.authService.startXAuth()
             let callbackURL = try await openWebSession(
                 url: request.authorizationURL,
                 scheme: request.callbackScheme
             )
-            let tokens = try await state.authService.completeXAuth(callbackURL: callbackURL)
+            // deviceId always rides along when we have one — it lets the
+            // backend correlate anonymous activity with the claiming
+            // creator even when there's no specific draftUuid to claim.
+            let deviceId = try? await state.keychain.stableDeviceId()
+            let tokens = try await state.authService.completeXAuth(
+                callbackURL: callbackURL,
+                draftToken: draftToken,
+                draftUuid: draftUuid,
+                deviceId: deviceId
+            )
             state.session.apply(tokens: tokens)
+            // The pre-sign-in funnel draft is now claimed server-side. Promote
+            // its uuid to `firstProductUuid` (instead of dropping it) so the
+            // Creations tab can surface that video as the creator's first
+            // product, editable + publishable.
+            if let claimed = draftUuid, !claimed.isEmpty {
+                try? await state.keychain.set(claimed, for: .firstProductUuid)
+            }
+            try? await state.keychain.remove(.pendingDraftToken)
+            try? await state.keychain.remove(.pendingDraftUuid)
         } catch let error as APIError {
             if let code = error.code {
                 logger.warning("X sign-in failed: code=\(code.rawValue), reason=\(error.userFacingMessage)")
@@ -59,7 +78,16 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
     }
 
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        ASPresentationAnchor()
+        let scenes = UIApplication.shared.connectedScenes
+        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
+            ?? scenes.compactMap { $0 as? UIWindowScene }.first
+        if let window = windowScene?.windows.first(where: \.isKeyWindow) {
+            return window
+        }
+        if let window = windowScene?.windows.first {
+            return window
+        }
+        return ASPresentationAnchor()
     }
 
 }

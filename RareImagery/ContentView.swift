@@ -12,9 +12,8 @@ import RareImageryAPI
 ///      the live-preview screen yet) → LivePreviewView (the "You're live"
 ///      screen — the new onboarding pattern per the 2026-05-23 redesign).
 ///
-///   3. RETURNING user (or anyone who's tapped "Create first product" /
-///      "Just explore" on the LivePreviewView) → CaptureFlowView (the main
-///      app entry).
+///   3. RETURNING user (or anyone who's finished OnePageCreator /
+///      tapped "Just explore" on LivePreviewView) → MainTabView.
 ///
 /// The transition from state #2 → #3 is local-only: a flag on AuthSession
 /// flips once the user dismisses the LivePreviewView. No round-trip to
@@ -41,15 +40,23 @@ struct ContentView: View {
                 // mints storeUuid/slug atomically at sign-in. If the wire ever
                 // decouples, the old wizard catches it.
                 OnboardingView(keychain: state.keychain)
-            } else if !state.session.hasSeenLivePreview {
-                // The "You're live" screen — first thing a freshly-signed-in
-                // user sees. Three actions decide what comes next.
-                LivePreviewView(onAction: handleLivePreviewAction)
             } else {
-                NavigationStack {
-                    CaptureFlowView()
-                }
-                .tint(AppColor.accent)
+                // Straight to the app. The old "You're live / Create your
+                // first product" (LivePreviewView) interstitial routed into
+                // the t-shirt/merch generator and has been removed — signed-in
+                // users land on Home, where "Add a product" is the primary
+                // (video → Grok) create action.
+                MainTabView()
+            }
+
+        case .anonymous:
+            // Value-first video funnel on first launch; skip lands in MainTabView.
+            // Trial-exhausted users go straight to the shell (per-screen gating).
+            // Burst-capture / OnePageCreator wiring remains separate (XTOOLS §6).
+            if !state.session.hasSeenFunnel, !state.session.trialExhausted {
+                VideoSubmissionFunnelView(onExit: { state.session.hasSeenFunnel = true })
+            } else {
+                MainTabView()
             }
         }
     }
@@ -58,21 +65,4 @@ struct ContentView: View {
         (claims.storeUuid ?? "").isEmpty || (claims.slug ?? "").isEmpty
     }
 
-    private func handleLivePreviewAction(_ action: LivePreviewView.Action) {
-        // All three actions dismiss the live-preview screen. The difference
-        // is what happens next:
-        //   - .createFirstProduct: route to Capture (the wow moment)
-        //   - .tweakStore: TweakSheetView is presented internally by
-        //                  LivePreviewView; this case fires after the user
-        //                  dismisses the sheet — same as "Just explore"
-        //                  semantically (they go to the main app)
-        //   - .justExplore: route to the main app, skip the capture intro
-        //
-        // For all three, we flip hasSeenLivePreview so we don't re-render
-        // the welcome screen on next render tick. CaptureFlowView is the
-        // default landing for all three actions today. If we later add a
-        // separate "browse / explore" view, .justExplore would route there
-        // instead. For v1 the main app IS the capture flow.
-        state.session.hasSeenLivePreview = true
-    }
 }

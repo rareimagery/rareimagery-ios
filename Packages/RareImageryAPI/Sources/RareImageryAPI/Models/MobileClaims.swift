@@ -32,7 +32,11 @@ public struct MobileClaims: Codable, Sendable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case sub
-        case storeUuid = "store_uuid"
+        // The BFF signs the JWT with camelCase claim keys (mobile-jwt.ts
+        // SignJWT({ storeUuid, … })). The old "store_uuid" mapping made
+        // storeUuid decode as nil, which routed every fresh sign-in into
+        // the legacy onboarding wizard ("no store in claims" fallback).
+        case storeUuid
         case slug
         case handle
         case role
