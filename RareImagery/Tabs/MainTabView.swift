@@ -114,10 +114,9 @@ private struct ViewfinderBrackets: View {
     }
 }
 
-/// My products — every product the signed-in creator has made (drafts +
-/// live), from GET /api/stores/products. Left the tab bar in the rare-create
-/// nav rework; now pushed from Profile → "My products" (so it renders inside
-/// the presenting NavigationStack rather than owning one).
+/// Products tab — every product the signed-in creator has made (drafts +
+/// live), from GET /api/stores/products. Tap a row to edit title/description/
+/// price and publish. Back on the tab bar in Page's old slot.
 struct ProductsTabView: View {
     @Environment(AppState.self) private var state
     @State private var products: [StoreProduct] = []
@@ -125,6 +124,7 @@ struct ProductsTabView: View {
     @State private var message: String?
 
     var body: some View {
+        NavigationStack {
             ScrollView {
                 LazyVStack(spacing: 14) {
                     if loading && products.isEmpty {
@@ -156,9 +156,10 @@ struct ProductsTabView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(AppColor.background)
-            .navigationTitle("My products")
+            .navigationTitle("Products")
             .refreshable { await load() }
             .task { await load() }
+        }
     }
 
     private func productCard(_ product: StoreProduct) -> some View {
@@ -207,9 +208,10 @@ struct ProductsTabView: View {
 
 }
 
-/// Page tab — the creator's public-facing storefront as visitors see it:
-/// X avatar + banner (captured at account creation) over the grid of
-/// products they've published. Read-only preview; editing lives in Products.
+/// My page — the creator's public-facing storefront as visitors see it:
+/// X avatar + banner over the grid of published products. Read-only preview;
+/// editing lives in the Products tab. Left the tab bar (Products took its
+/// slot); pushed from Profile → "My page" inside that stack.
 struct PageTabView: View {
     @Environment(AppState.self) private var state
     @State private var profile: StoreProfile?
@@ -220,7 +222,6 @@ struct PageTabView: View {
     private var slug: String { profile?.storeSlug ?? state.session.claims?.slug ?? handle }
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     LiveStorePreview(
@@ -239,10 +240,9 @@ struct PageTabView: View {
                 }
             }
             .background(AppColor.background)
-            .navigationTitle("Page")
+            .navigationTitle("My page")
             .refreshable { await load() }
             .task { await load() }
-        }
     }
 
     @ViewBuilder private var publishedSection: some View {
@@ -324,14 +324,14 @@ struct ProfileTabView: View {
                     }
                 }
 
-                // Products management left the tab bar (rare-create nav);
-                // drafts + publish stay reachable from here.
+                // The public storefront preview left the tab bar (Products
+                // took its slot); it stays reachable from here.
                 Section {
                     NavigationLink {
-                        ProductsTabView()
+                        PageTabView()
                             .environment(state)
                     } label: {
-                        Label("My products", systemImage: "bag")
+                        Label("My page", systemImage: "storefront")
                     }
                 }
 
@@ -348,17 +348,18 @@ struct ProfileTabView: View {
     }
 }
 
-/// The four capsule tabs (rare-create kit): the branded Bud "RareImagery"
-/// home tab, Friends, Page, Profile — with the Shop button in the center.
-/// Products management moved off the bar (reachable from Profile).
+/// The four capsule tabs: the branded Bud "RareImagery" home tab, Friends,
+/// Products (edit + publish the creator's listings), Profile — with the Shop
+/// button in the center. The public store preview (Page) lives under
+/// Profile → "My page".
 enum RareTab: CaseIterable {
-    case home, friends, page, profile
+    case home, friends, products, profile
 
     var label: String {
         switch self {
         case .home: "RareImagery"
         case .friends: "Friends"
-        case .page: "Page"
+        case .products: "Products"
         case .profile: "Profile"
         }
     }
@@ -367,7 +368,7 @@ enum RareTab: CaseIterable {
         switch self {
         case .home: "house"           // fallback only — home renders Bud
         case .friends: "person.2"
-        case .page: "storefront"
+        case .products: "shippingbox"
         case .profile: "person.crop.circle"
         }
     }
@@ -387,6 +388,7 @@ struct RareTabBar: View {
             tabButton(.home)
             tabButton(.friends)
 
+
             // Center — Shop (transparent variant: 34pt icon, muted label)
             Button(action: onShop) {
                 VStack(spacing: 3) {
@@ -403,7 +405,7 @@ struct RareTabBar: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Shop creator stores")
 
-            tabButton(.page)
+            tabButton(.products)
             tabButton(.profile)
         }
         .padding(8)
@@ -508,7 +510,7 @@ struct MainTabView: View {
         switch tab {
         case .home: HomeTabView()
         case .friends: FriendsTabView()
-        case .page: PageTabView()
+        case .products: ProductsTabView()
         case .profile: ProfileTabView()
         }
     }
