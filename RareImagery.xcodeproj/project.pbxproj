@@ -46,12 +46,14 @@
 		75275A24CCC543C975D635A5 /* SendToCircleSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7745D534331234989F3442C /* SendToCircleSheet.swift */; };
 		756C9E188B42F8537139710C /* SpaceGrotesk-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B880D0340C2C0456856E12A4 /* SpaceGrotesk-Bold.ttf */; };
 		7755B283947141FA0F120CBB /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EB854C6069A6E72B48C8E9 /* CameraPicker.swift */; };
+		7897E8C1327A006DC1F6CBD0 /* StoreDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF7E60BAC7EE2539E905A604 /* StoreDetailView.swift */; };
 		79D1CD50B226183CEE51CEBA /* LICENSES.md in Resources */ = {isa = PBXBuildFile; fileRef = C7F63EC400E27473735A22A5 /* LICENSES.md */; };
 		89D805FB2245C5EE6C4A55A2 /* CircleMemberRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6C5211852FA9E2644EDE472 /* CircleMemberRow.swift */; };
 		8C0F556E34A151C9D949B61C /* MyCircleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD0A7CCC37729FBE1616AF44 /* MyCircleView.swift */; };
 		8F090E20C4873D6031008678 /* CreateAndLaunchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E3DD4DC00F0F0A88968F803 /* CreateAndLaunchButton.swift */; };
 		8F0B55F4EC385120D8E007CA /* CircleTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 959844A29DA024732D7E3C2C /* CircleTabView.swift */; };
 		90608A12B3A3D74F4005AC7D /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F4579A234B9700D34B457B /* OnboardingView.swift */; };
+		911E06ACFE77A2013F5FDAC2 /* FriendsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC35BAC0015B5E3595542D5 /* FriendsTabView.swift */; };
 		94CBE3F547DF5D0DE40D4490 /* SpaceGrotesk-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 243151C6232E4A659BE9C9F6 /* SpaceGrotesk-Regular.ttf */; };
 		95F57ECBDFD05FD33E48BEC5 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCD1B9443C189BC2396C17B /* CaptureView.swift */; };
 		9AE9C4508BF72AA323E3B876 /* SpaceGrotesk-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 59D46B5FD96DC41F5FC8C8F9 /* SpaceGrotesk-Medium.ttf */; };
@@ -133,6 +135,7 @@
 		567D6688D4E093F76A2024E2 /* MerchProductKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchProductKind.swift; sourceTree = "<group>"; };
 		57F4579A234B9700D34B457B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		59D46B5FD96DC41F5FC8C8F9 /* SpaceGrotesk-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Medium.ttf"; sourceTree = "<group>"; };
+		5BC35BAC0015B5E3595542D5 /* FriendsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsTabView.swift; sourceTree = "<group>"; };
 		5EBD2D5957439105AD4E5BE7 /* LivePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePreviewView.swift; sourceTree = "<group>"; };
 		615F3D0AE201A49D27AB9E72 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		64DC757CB538E12E5FFEEEED /* StoreEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreEditorView.swift; sourceTree = "<group>"; };
@@ -178,6 +181,7 @@
 		E61770B5221B245BDB58DFFF /* QuickProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickProductView.swift; sourceTree = "<group>"; };
 		ED4F2BE851867305095EAE67 /* FunnelResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunnelResultView.swift; sourceTree = "<group>"; };
 		EDCD1B9443C189BC2396C17B /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
+		EF7E60BAC7EE2539E905A604 /* StoreDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDetailView.swift; sourceTree = "<group>"; };
 		F15AFBF0D89DF276B2D577A2 /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
 		F3842D09D1679BEF4048F164 /* CaptureSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSession.swift; sourceTree = "<group>"; };
 		F39AFBAB59CBAB1DC22C1679 /* TweakSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweakSheetView.swift; sourceTree = "<group>"; };
@@ -229,6 +233,7 @@
 			isa = PBXGroup;
 			children = (
 				959844A29DA024732D7E3C2C /* CircleTabView.swift */,
+				5BC35BAC0015B5E3595542D5 /* FriendsTabView.swift */,
 				615F3D0AE201A49D27AB9E72 /* MainTabView.swift */,
 			);
 			path = Tabs;
@@ -382,6 +387,14 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		957937A24041C7E1791DBC36 /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				EF7E60BAC7EE2539E905A604 /* StoreDetailView.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
 		AD60A7A0F3DD0C4D8D2F4663 /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -441,6 +454,7 @@
 				3D7E03109B09A31753CFD875 /* OnePageCreator */,
 				B251D13FD22C87106551775A /* Product */,
 				2494956931879306948CBE09 /* State */,
+				957937A24041C7E1791DBC36 /* Store */,
 				28ED34161E4D6E014297BCB7 /* Tabs */,
 				71F284B63516C7B8982FF438 /* Theme */,
 				1F72CEFC12D5B9C685E15D66 /* Assets.xcassets */,
@@ -629,6 +643,7 @@
 				69429E0E312359787A51AB51 /* FlowLayout.swift in Sources */,
 				C0F1703F87E92E12A378C8CF /* FrameSelector.swift in Sources */,
 				4552FC252A0B174EA625D883 /* FreeUsesChip.swift in Sources */,
+				911E06ACFE77A2013F5FDAC2 /* FriendsTabView.swift in Sources */,
 				01AB4021D43BC0B59DC21126 /* FunnelInstructionsView.swift in Sources */,
 				C1D966BCBEE37310AAEF8E37 /* FunnelProcessingView.swift in Sources */,
 				B002A6511784AE18ADFCF288 /* FunnelRecordView.swift in Sources */,
@@ -659,6 +674,7 @@
 				A588D09313726CC649A0A18C /* SignInView.swift in Sources */,
 				5EFB76C84C38FA3D5BDAF194 /* SignUpReminderBanner.swift in Sources */,
 				E399F14FF99000770FBA1FF3 /* SpeechService.swift in Sources */,
+				7897E8C1327A006DC1F6CBD0 /* StoreDetailView.swift in Sources */,
 				2F41C9F154119F9C8C87418E /* StoreEditorView.swift in Sources */,
 				D994862ECB4DF0FB9AAD9D8B /* TweakSheetView.swift in Sources */,
 				EC5D7ACA7A9F4CF512195421 /* Typography.swift in Sources */,

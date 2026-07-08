@@ -308,36 +308,39 @@ struct ProfileTabView: View {
     }
 }
 
-/// The five app tabs. Icons are outline SF Symbols matching the handoff's
-/// Lucide set (home / users / shopping-bag / store / circle-user-round).
+/// The five app tabs. The pfp/Profile button leads the bar; Circle became
+/// Friends (your X follows + their stores). Icons are outline SF Symbols
+/// matching the handoff's Lucide set.
 enum RareTab: CaseIterable {
-    case home, circle, products, page, profile
+    case profile, home, friends, products, page
 
     var label: String {
         switch self {
+        case .profile: "Profile"
         case .home: "Home"
-        case .circle: "Circle"
+        case .friends: "Friends"
         case .products: "Products"
         case .page: "Page"
-        case .profile: "Profile"
         }
     }
 
     var icon: String {
         switch self {
+        case .profile: "person.crop.circle"
         case .home: "house"
-        case .circle: "person.3"
+        case .friends: "person.2"
         case .products: "bag"
         case .page: "storefront"
-        case .profile: "person.crop.circle"
         }
     }
 }
 
 /// Floating rounded-capsule bottom nav (rare-app Main App Kit): #2C1033 fill,
 /// hairline border, active tab in bright purple with a subtle highlight pill.
+/// The Profile button renders the signed-in creator's X avatar when available.
 struct RareTabBar: View {
     @Binding var selected: RareTab
+    var avatarURL: URL?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -353,9 +356,7 @@ struct RareTabBar: View {
                                     .fill(Color.white.opacity(0.07))
                                     .frame(width: 46, height: 32)
                             }
-                            Image(systemName: tab.icon)
-                                .font(.system(size: 20, weight: .regular))
-                                .foregroundStyle(isOn ? AppColor.brandActive : .white)
+                            tabIcon(tab, isOn: isOn)
                         }
                         .frame(height: 32)
                         Text(tab.label)
@@ -376,10 +377,33 @@ struct RareTabBar: View {
         .padding(.horizontal, 14)
         .padding(.bottom, 18)
     }
+
+    @ViewBuilder private func tabIcon(_ tab: RareTab, isOn: Bool) -> some View {
+        if tab == .profile, let avatarURL {
+            AsyncImage(url: avatarURL) { phase in
+                switch phase {
+                case .success(let image): image.resizable().scaledToFill()
+                default:
+                    Image(systemName: tab.icon)
+                        .font(.system(size: 20, weight: .regular))
+                        .foregroundStyle(isOn ? AppColor.brandActive : .white)
+                }
+            }
+            .frame(width: 26, height: 26)
+            .clipShape(Circle())
+            .overlay(Circle().stroke(isOn ? AppColor.brandActive : Color.white.opacity(0.25), lineWidth: isOn ? 2 : 1))
+        } else {
+            Image(systemName: tab.icon)
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(isOn ? AppColor.brandActive : .white)
+        }
+    }
 }
 
 struct MainTabView: View {
+    @Environment(AppState.self) private var state
     @State private var tab: RareTab = .home
+    @State private var avatarURL: URL?
 
     var body: some View {
         ZStack {
@@ -390,18 +414,23 @@ struct MainTabView: View {
             // scroll content clears it.
             content
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    RareTabBar(selected: $tab)
+                    RareTabBar(selected: $tab, avatarURL: avatarURL)
                 }
+        }
+        .task {
+            // Pfp for the Profile tab button — best-effort; falls back to the
+            // person icon until the profile loads.
+            avatarURL = (try? await state.productRepository.myProfile())?.avatarURL
         }
     }
 
     @ViewBuilder private var content: some View {
         switch tab {
+        case .profile: ProfileTabView()
         case .home: HomeTabView()
-        case .circle: CircleTabView()
+        case .friends: FriendsTabView()
         case .products: ProductsTabView()
         case .page: PageTabView()
-        case .profile: ProfileTabView()
         }
     }
 }

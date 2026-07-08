@@ -26,6 +26,21 @@ public actor CircleRepository {
         return response.users
     }
 
+    /// Everyone the caller follows on X, annotated with their RareImagery
+    /// store slug when they have one. Powers the Friends tab; store-having
+    /// friends arrive first (server-sorted).
+    public func fetchFriends() async throws -> [FriendSummary] {
+        let endpoint = APIEndpoint(
+            path: "/api/social/friends",
+            method: .get,
+            requiresAuth: true,
+            contentType: nil,
+            timeout: 20
+        )
+        let response = try await client.send(endpoint, as: FriendsResponse.self)
+        return response.friends
+    }
+
     /// Curated follows + recent interactions from the BFF.
     public func fetchSuggestions(limit: Int = 24, includeRecent: Bool = true) async throws -> [XUserSummary] {
         let endpoint = APIEndpoint(
