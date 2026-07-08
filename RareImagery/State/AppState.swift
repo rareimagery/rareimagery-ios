@@ -18,6 +18,7 @@ final class AppState {
     let anonymousAuthRepository: AnonymousAuthRepository
     let publishProductRepository: PublishProductRepository
     let videoUploadRepository: VideoUploadRepository
+    let storeDiscoveryRepository: StoreDiscoveryRepository
     let session: AuthSession
     let capture: CaptureSession
 
@@ -47,6 +48,7 @@ final class AppState {
         self.anonymousAuthRepository = AnonymousAuthRepository(client: client)
         self.publishProductRepository = PublishProductRepository(client: client)
         self.videoUploadRepository = VideoUploadRepository(client: client)
+        self.storeDiscoveryRepository = StoreDiscoveryRepository(client: client)
         self.session = AuthSession()
 
         // Phase 4.2 — Analytics dispatch swap. Configure ONCE here so
