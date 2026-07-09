@@ -54,11 +54,11 @@
 		8F090E20C4873D6031008678 /* CreateAndLaunchButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E3DD4DC00F0F0A88968F803 /* CreateAndLaunchButton.swift */; };
 		8F0B55F4EC385120D8E007CA /* CircleTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 959844A29DA024732D7E3C2C /* CircleTabView.swift */; };
 		90608A12B3A3D74F4005AC7D /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57F4579A234B9700D34B457B /* OnboardingView.swift */; };
-		911E06ACFE77A2013F5FDAC2 /* FriendsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BC35BAC0015B5E3595542D5 /* FriendsTabView.swift */; };
 		94CBE3F547DF5D0DE40D4490 /* SpaceGrotesk-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 243151C6232E4A659BE9C9F6 /* SpaceGrotesk-Regular.ttf */; };
 		95F57ECBDFD05FD33E48BEC5 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCD1B9443C189BC2396C17B /* CaptureView.swift */; };
 		9AE9C4508BF72AA323E3B876 /* SpaceGrotesk-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 59D46B5FD96DC41F5FC8C8F9 /* SpaceGrotesk-Medium.ttf */; };
 		A588D09313726CC649A0A18C /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA54BC1FD4F0B21E40964DA6 /* SignInView.swift */; };
+		A640547259328F4869BB6571 /* BrowseProductsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 651E64D328F357E0A391426C /* BrowseProductsView.swift */; };
 		AF78E9D9C0D93561D96E38BB /* FunnelValuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142C822B445F8F4B8F0E3F69 /* FunnelValuation.swift */; };
 		B002A6511784AE18ADFCF288 /* FunnelRecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD45CEA404D519945DF8A038 /* FunnelRecordView.swift */; };
 		B4EB35A3E141A2DCCB19434F /* CircleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE4A815D880C857E8A0A22F3 /* CircleService.swift */; };
@@ -138,10 +138,10 @@
 		567D6688D4E093F76A2024E2 /* MerchProductKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchProductKind.swift; sourceTree = "<group>"; };
 		57F4579A234B9700D34B457B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		59D46B5FD96DC41F5FC8C8F9 /* SpaceGrotesk-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Medium.ttf"; sourceTree = "<group>"; };
-		5BC35BAC0015B5E3595542D5 /* FriendsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsTabView.swift; sourceTree = "<group>"; };
 		5EBD2D5957439105AD4E5BE7 /* LivePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePreviewView.swift; sourceTree = "<group>"; };
 		615F3D0AE201A49D27AB9E72 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		64DC757CB538E12E5FFEEEED /* StoreEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreEditorView.swift; sourceTree = "<group>"; };
+		651E64D328F357E0A391426C /* BrowseProductsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseProductsView.swift; sourceTree = "<group>"; };
 		6A5C9E47A9BA61B3EB253B9A /* CaptureFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureFlowView.swift; sourceTree = "<group>"; };
 		7F96E5FD76CE6544994DB079 /* HankenGrotesk-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "HankenGrotesk-Bold.ttf"; sourceTree = "<group>"; };
 		8117CA6DD6C3DFE2094C16CB /* FirstProductFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstProductFlowView.swift; sourceTree = "<group>"; };
@@ -237,7 +237,6 @@
 			isa = PBXGroup;
 			children = (
 				959844A29DA024732D7E3C2C /* CircleTabView.swift */,
-				5BC35BAC0015B5E3595542D5 /* FriendsTabView.swift */,
 				615F3D0AE201A49D27AB9E72 /* MainTabView.swift */,
 			);
 			path = Tabs;
@@ -394,6 +393,7 @@
 		957937A24041C7E1791DBC36 /* Store */ = {
 			isa = PBXGroup;
 			children = (
+				651E64D328F357E0A391426C /* BrowseProductsView.swift */,
 				4A3AFA70E74630BB46CBE400 /* ShopView.swift */,
 				EF7E60BAC7EE2539E905A604 /* StoreDetailView.swift */,
 			);
@@ -632,6 +632,7 @@
 				BA550E671858740D907E4D04 /* AtCapWarningCard.swift in Sources */,
 				E71D3C94F745511E66F61C59 /* AuthCoordinator.swift in Sources */,
 				C85CD70BCEA109C57E041C82 /* AuthSession.swift in Sources */,
+				A640547259328F4869BB6571 /* BrowseProductsView.swift in Sources */,
 				7755B283947141FA0F120CBB /* CameraPicker.swift in Sources */,
 				265E971426A41E66373064C7 /* CaptureFlowView.swift in Sources */,
 				0C839E041DA00AFA2DA15730 /* CaptureResultView.swift in Sources */,
@@ -657,7 +658,6 @@
 				69429E0E312359787A51AB51 /* FlowLayout.swift in Sources */,
 				C0F1703F87E92E12A378C8CF /* FrameSelector.swift in Sources */,
 				4552FC252A0B174EA625D883 /* FreeUsesChip.swift in Sources */,
-				911E06ACFE77A2013F5FDAC2 /* FriendsTabView.swift in Sources */,
 				01AB4021D43BC0B59DC21126 /* FunnelInstructionsView.swift in Sources */,
 				C1D966BCBEE37310AAEF8E37 /* FunnelProcessingView.swift in Sources */,
 				B002A6511784AE18ADFCF288 /* FunnelRecordView.swift in Sources */,

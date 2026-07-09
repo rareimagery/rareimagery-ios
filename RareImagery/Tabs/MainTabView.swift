@@ -167,7 +167,7 @@ struct ProductsTabView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(AppColor.background)
-            .navigationTitle("Products")
+            .navigationTitle("My Products")
             .refreshable { await load() }
             .task { await load() }
         }
@@ -388,18 +388,19 @@ struct ProfileTabView: View {
     }
 }
 
-/// The four capsule tabs: the branded Bud "RareImagery" home tab, Friends,
-/// Products (edit + publish the creator's listings), Profile — with the Shop
-/// button in the center. The public store preview (Page) lives under
+/// The four capsule tabs: the branded Bud "RareImagery" home tab, Products
+/// (browse + search every creator's published products — took Friends' slot),
+/// My Products (edit + publish the creator's own listings), Profile — with
+/// the Shop button in the center. The public store preview (Page) lives under
 /// Profile → "My page".
 enum RareTab: CaseIterable {
-    case home, friends, products, profile
+    case home, browse, products, profile
 
     var label: String {
         switch self {
         case .home: "RareImagery"
-        case .friends: "Friends"
-        case .products: "Products"
+        case .browse: "Products"
+        case .products: "My Products"
         case .profile: "Profile"
         }
     }
@@ -407,7 +408,7 @@ enum RareTab: CaseIterable {
     var icon: String {
         switch self {
         case .home: "house"           // fallback only — home renders Bud
-        case .friends: "person.2"
+        case .browse: "square.grid.2x2"
         case .products: "shippingbox"
         case .profile: "person.crop.circle"
         }
@@ -426,7 +427,7 @@ struct RareTabBar: View {
     var body: some View {
         HStack(spacing: 4) {
             tabButton(.home)
-            tabButton(.friends)
+            tabButton(.browse)
 
 
             // Center — Shop (transparent variant: 34pt icon, muted label)
@@ -549,7 +550,7 @@ struct MainTabView: View {
     @ViewBuilder private var content: some View {
         switch tab {
         case .home: HomeTabView(onProductCreated: { tab = .products })
-        case .friends: FriendsTabView()
+        case .browse: BrowseProductsView()
         case .products: ProductsTabView()
         case .profile: ProfileTabView()
         }

@@ -27,6 +27,22 @@ public actor StoreDiscoveryRepository {
         return response.stores
     }
 
+    // MARK: - GET /api/discover/products
+
+    /// Every published product across approved stores, newest first, with
+    /// store attribution — powers the browse-Products tab. Search is local.
+    public func listProducts() async throws -> [StoreProduct] {
+        let endpoint = APIEndpoint(
+            path: "/api/discover/products",
+            method: .get,
+            requiresAuth: true,
+            timeout: 20
+        )
+        let response: StoreProductsResponse = try await client.send(endpoint)
+        logger.info("listProducts: \(response.products.count) products")
+        return response.products
+    }
+
     // MARK: - GET /api/discover/stores/{slug}
 
     /// One store's hero profile + published products, for the native store page.
