@@ -6,6 +6,10 @@ struct SignInView: View {
     @State private var coordinator = AuthCoordinator()
     @State private var isAuthenticating = false
 
+    private var usesDrupalOAuth: Bool {
+        state.configuration.isOAuthClientConfigured
+    }
+
     var body: some View {
         VStack(spacing: 32) {
             Spacer()
@@ -36,7 +40,11 @@ struct SignInView: View {
                 Button {
                     Task {
                         isAuthenticating = true
-                        await coordinator.signInWithX(state: state)
+                        if usesDrupalOAuth {
+                            await coordinator.signInWithDrupal(state: state)
+                        } else {
+                            await coordinator.signInWithX(state: state)
+                        }
                         isAuthenticating = false
                     }
                 } label: {
@@ -45,10 +53,10 @@ struct SignInView: View {
                             ProgressView()
                                 .tint(.white)
                         } else {
-                            Image(systemName: "x.square.fill")
+                            Image(systemName: usesDrupalOAuth ? "person.crop.circle.badge.checkmark" : "x.square.fill")
                                 .font(.system(size: 20, weight: .semibold))
                         }
-                        Text(isAuthenticating ? "Signing in…" : "Continue with X")
+                        Text(primaryButtonTitle)
                             .font(AppFont.buttonLabel)
                     }
                     .foregroundStyle(.white)
@@ -69,6 +77,23 @@ struct SignInView: View {
                     .foregroundStyle(AppColor.textSecondary)
 
                 #if DEBUG
+                if usesDrupalOAuth {
+                    Button {
+                        Task {
+                            isAuthenticating = true
+                            await coordinator.signInWithX(state: state)
+                            isAuthenticating = false
+                        }
+                    } label: {
+                        Text("Continue with X (legacy BFF)")
+                            .font(AppFont.bodyText(14))
+                            .foregroundStyle(AppColor.textSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .disabled(isAuthenticating)
+                }
+
                 Button {
                     state.debugSimulateSignIn()
                 } label: {
@@ -87,5 +112,10 @@ struct SignInView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(AppColor.background)
         .ignoresSafeArea()
+    }
+
+    private var primaryButtonTitle: String {
+        if isAuthenticating { return "Signing in…" }
+        return usesDrupalOAuth ? "Sign in" : "Continue with X"
     }
 }

@@ -117,6 +117,38 @@ final class AuthSession {
         }
     }
 
+    /// Prefer MobileClaims when the access token is a BFF JWT; otherwise build
+    /// a session from a Drupal simple_oauth JWT (or opaque token + expiry).
+    func applyOAuthTokens(accessToken: String, expiresAt: Date?) {
+        if let claims = try? JWTDecoder.decode(accessToken) {
+            applyRefresh(
+                tokens: AuthTokenResponse(
+                    accessToken: accessToken,
+                    refreshToken: "",
+                    expiresIn: max(0, Int(claims.expiresAt.timeIntervalSinceNow))
+                ),
+                claims: claims
+            )
+            return
+        }
+        if let claims = try? JWTDecoder.decodePayload(accessToken) {
+            status = .signedIn(claims)
+            creator = nil
+            lastError = nil
+            return
+        }
+        let exp = expiresAt ?? Date().addingTimeInterval(3600)
+        status = .signedIn(MobileClaims(
+            sub: "oauth-user",
+            aud: "drupal",
+            exp: Int(exp.timeIntervalSince1970)
+        ))
+        creator = nil
+        lastError = nil
+        hasSeenLivePreview = false
+        hasSeenFunnel = false
+    }
+
     /// Updates session after a silent token refresh. Unlike `apply(tokens:)`,
     /// preserves onboarding flags (`hasSeenLivePreview`, `hasSeenFunnel`).
     func applyRefresh(tokens: AuthTokenResponse, claims: MobileClaims) {

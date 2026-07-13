@@ -170,6 +170,19 @@ struct ProductsTabView: View {
             .navigationTitle("Products")
             .refreshable { await load() }
             .task { await load() }
+            #if DEBUG
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        JSONAPIProductsDebugView()
+                            .environment(state)
+                    } label: {
+                        Image(systemName: "ladybug")
+                    }
+                    .accessibilityLabel("JSON:API debug list")
+                }
+            }
+            #endif
         }
     }
 

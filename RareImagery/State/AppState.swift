@@ -8,6 +8,7 @@ final class AppState {
     let configuration: APIConfiguration
     let keychain: KeychainStore
     let client: APIClient
+    let authManager: AuthManager
     let authRepository: AuthRepository
     let authService: AuthService
     let productRepository: ProductRepository
@@ -18,6 +19,9 @@ final class AppState {
     let anonymousAuthRepository: AnonymousAuthRepository
     let publishProductRepository: PublishProductRepository
     let videoUploadRepository: VideoUploadRepository
+    let mediaUploadRepository: MediaUploadRepository
+    let captureRepository: CaptureRepository
+    let voiceTokenClient: VoiceTokenClient
     let storeDiscoveryRepository: StoreDiscoveryRepository
     let salesRepository: SalesRepository
     let session: AuthSession
@@ -39,6 +43,8 @@ final class AppState {
         self.keychain = keychain
         let client = APIClient(configuration: configuration, keychain: keychain)
         self.client = client
+        let authManager = AuthManager(configuration: configuration, keychain: keychain)
+        self.authManager = authManager
         self.authRepository = AuthRepository(client: client)
         self.authService = AuthService(configuration: configuration, repository: authRepository, client: client)
         self.productRepository = ProductRepository(client: client)
@@ -49,6 +55,9 @@ final class AppState {
         self.anonymousAuthRepository = AnonymousAuthRepository(client: client)
         self.publishProductRepository = PublishProductRepository(client: client)
         self.videoUploadRepository = VideoUploadRepository(client: client)
+        self.mediaUploadRepository = MediaUploadRepository(client: client)
+        self.captureRepository = CaptureRepository(client: client)
+        self.voiceTokenClient = VoiceTokenClient(client: client)
         self.storeDiscoveryRepository = StoreDiscoveryRepository(client: client)
         self.salesRepository = SalesRepository(client: client)
         self.session = AuthSession()
@@ -67,13 +76,15 @@ final class AppState {
 
         Task { [weak self] in
             guard let self else { return }
+            await self.authManager.install(on: self.client)
             await self.client.setAuthEventHandlers(AuthEventHandlers(
                 onTokensRefreshed: { [weak self] tokens in
                     await MainActor.run {
                         guard let self else { return }
-                        if let claims = try? JWTDecoder.decode(tokens.accessToken) {
-                            self.session.applyRefresh(tokens: tokens, claims: claims)
-                        }
+                        self.session.applyOAuthTokens(
+                            accessToken: tokens.accessToken,
+                            expiresAt: tokens.accessTokenExpiresAt
+                        )
                     }
                 },
                 onSessionInvalidated: { [weak self] in
@@ -86,6 +97,7 @@ final class AppState {
     }
 
     private func handleSessionInvalidated() async {
+        await authManager.signOut()
         try? await authService.signOut()
         session.setSignedOut(error: "Session expired. Please sign in again.")
         capture.reset()
@@ -131,36 +143,45 @@ final class AppState {
 
         // Production user — never downgrade to anonymous on this path.
         do {
+            _ = await authManager.restoreFromKeychain()
+
             let access = try await keychain.get(.accessToken)
             let needsRefresh: Bool
-            if let access {
-                if let claims = try? JWTDecoder.decode(access) {
-                    needsRefresh = claims.shouldRefresh()
-                } else {
-                    needsRefresh = true
-                }
+            if let access, let claims = Self.claims(from: access) {
+                needsRefresh = claims.shouldRefresh()
+            } else if let expiryString = try? await keychain.get(.accessTokenExpiry),
+                      let expiry = ISO8601DateFormatter().date(from: expiryString) {
+                needsRefresh = expiry.timeIntervalSinceNow <= 60
             } else {
                 needsRefresh = true
             }
 
             if needsRefresh {
                 let tokens = try await client.refreshTokens()
-                let claims = try JWTDecoder.decode(tokens.accessToken)
-                session.applyRefresh(tokens: tokens, claims: claims)
+                session.applyOAuthTokens(accessToken: tokens.accessToken, expiresAt: tokens.accessTokenExpiresAt)
             } else if let access {
-                let claims = try JWTDecoder.decode(access)
-                session.status = .signedIn(claims)
+                session.applyOAuthTokens(accessToken: access, expiresAt: nil)
             } else {
                 let tokens = try await client.refreshTokens()
-                let claims = try JWTDecoder.decode(tokens.accessToken)
-                session.applyRefresh(tokens: tokens, claims: claims)
+                session.applyOAuthTokens(accessToken: tokens.accessToken, expiresAt: tokens.accessTokenExpiresAt)
             }
             return true
         } catch {
+            try? await authManager.signOut()
             try? await authService.signOut()
             session.setSignedOut(error: "Session expired. Please sign in again.")
             return true
         }
+    }
+
+    private static func claims(from accessToken: String) -> MobileClaims? {
+        if let claims = try? JWTDecoder.decode(accessToken) {
+            return claims
+        }
+        if let claims = try? JWTDecoder.decodePayload(accessToken), !claims.isExpired {
+            return claims
+        }
+        return nil
     }
 
     private func tryExistingAnonymousSession() async -> Bool {
@@ -252,6 +273,7 @@ final class AppState {
     }
 
     func signOut() async {
+        await authManager.signOut()
         do { try await authService.signOut() } catch { session.setError("Sign-out failed: \(error)") }
         // Phase 3: on explicit sign-out, also clear the anonymous trial
         // state. Returning to anonymous after a deliberate sign-out feels

@@ -1,5 +1,6 @@
 import XCTest
 @testable import RareImagery
+import RareImageryAPI
 
 @MainActor
 final class AuthSessionRefreshTests: XCTestCase {

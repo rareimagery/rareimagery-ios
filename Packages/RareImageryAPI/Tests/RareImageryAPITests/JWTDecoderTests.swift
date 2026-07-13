@@ -15,7 +15,7 @@ final class JWTDecoderTests: XCTestCase {
         let exp = Int(Date().addingTimeInterval(3600).timeIntervalSince1970)
         let token = makeToken(payload: [
             "sub": "user-uuid",
-            "store_uuid": "store-uuid",
+            "storeUuid": "store-uuid",
             "slug": "test",
             "handle": "tester",
             "role": "x_creator",
@@ -30,6 +30,23 @@ final class JWTDecoderTests: XCTestCase {
         XCTAssertEqual(claims.role, "x_creator")
         XCTAssertEqual(claims.aud, "mobile-access")
         XCTAssertFalse(claims.isExpired)
+    }
+
+    func testDecodePayloadAcceptsDrupalAudience() throws {
+        let exp = Int(Date().addingTimeInterval(3600).timeIntervalSince1970)
+        let token = makeToken(payload: [
+            "sub": "drupal-user-uuid",
+            "aud": "11111111-2222-3333-4444-555555555555",
+            "exp": exp
+        ])
+        let claims = try JWTDecoder.decodePayload(token)
+        XCTAssertEqual(claims.sub, "drupal-user-uuid")
+        XCTAssertEqual(claims.aud, "11111111-2222-3333-4444-555555555555")
+        XCTAssertThrowsError(try JWTDecoder.decode(token)) { error in
+            guard case JWTDecoder.Failure.wrongAudience = error else {
+                return XCTFail("Expected wrongAudience, got \(error)")
+            }
+        }
     }
 
     func testRejectsWrongAudience() {

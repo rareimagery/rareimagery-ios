@@ -8,6 +8,31 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
 
     private let logger = APILogger(category: "AuthCoordinator")
 
+    func signInWithDrupal(state: AppState) async {
+        do {
+            let request = try await state.authManager.startSignIn()
+            let callbackURL = try await openWebSession(
+                url: request.authorizationURL,
+                scheme: request.callbackScheme
+            )
+            let tokens = try await state.authManager.completeSignIn(callbackURL: callbackURL)
+            // Clear anonymous trial state — production OAuth takes over.
+            try? await state.keychain.clearAnonymousState()
+            state.session.applyOAuthTokens(
+                accessToken: tokens.accessToken,
+                expiresAt: tokens.expiresAt
+            )
+            state.session.hasSeenLivePreview = false
+            state.session.hasSeenFunnel = false
+        } catch let error as APIError {
+            logger.warning("Drupal sign-in failed: \(error.userFacingMessage)")
+            state.session.setError(error.userFacingMessage)
+        } catch {
+            logger.error("Drupal sign-in unexpected error: \(error.localizedDescription)")
+            state.session.setError(error.localizedDescription)
+        }
+    }
+
     func signInWithX(state: AppState, draftToken: String? = nil, draftUuid: String? = nil) async {
         do {
             let request = try await state.authService.startXAuth()

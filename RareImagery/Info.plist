@@ -47,7 +47,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>RareImagery uses the camera to capture photos of items you want to sell.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>RareImagery records voice notes you add to product listings.</string>
+	<string>RareImagery uses the microphone so you can talk through listing details with the in-app voice assistant.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>RareImagery saves processed product photos back to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -80,5 +80,7 @@
 	</array>
 	<key>XClientID</key>
 	<string>$(X_CLIENT_ID)</string>
+	<key>OAuthClientID</key>
+	<string>$(OAUTH_CLIENT_ID)</string>
 </dict>
 </plist>

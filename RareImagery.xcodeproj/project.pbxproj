@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E81BAB1728C146D78A055F02 /* VoiceAudioEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 669ECBD309354D22A98CF164 /* VoiceAudioEngine.swift */; };
+		9FEDB37A141244C783FF14CA /* PCMWavWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7F815A8F9254C99B12578D9 /* PCMWavWriter.swift */; };
+		38D3F862DFD34A6E85DF6A85 /* JSONAPIProductsDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E6D14764D24E3D93A1ED7A /* JSONAPIProductsDebugView.swift */; };
+		A0AB486670DC41DC89DF89BD /* VoiceAudioEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F98CF44175DB4CB697110F7C /* VoiceAudioEngineTests.swift */; };
 		01AB4021D43BC0B59DC21126 /* FunnelInstructionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17F41B93E445972F2541A6F3 /* FunnelInstructionsView.swift */; };
 		0696CF3AC1702E7C6D1D3112 /* QuickProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61770B5221B245BDB58DFFF /* QuickProductView.swift */; };
 		0C839E041DA00AFA2DA15730 /* CaptureResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0B96D20614F7078C45F10 /* CaptureResultView.swift */; };
@@ -104,6 +108,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		669ECBD309354D22A98CF164 /* VoiceAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioEngine.swift; sourceTree = "<group>"; };
+		B7F815A8F9254C99B12578D9 /* PCMWavWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PCMWavWriter.swift; sourceTree = "<group>"; };
+		65E6D14764D24E3D93A1ED7A /* JSONAPIProductsDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONAPIProductsDebugView.swift; sourceTree = "<group>"; };
+		F98CF44175DB4CB697110F7C /* VoiceAudioEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioEngineTests.swift; sourceTree = "<group>"; };
 		118FF32B2F2FF2E70D73A3C1 /* RareImagery.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RareImagery.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		142C822B445F8F4B8F0E3F69 /* FunnelValuation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunnelValuation.swift; sourceTree = "<group>"; };
 		16359696C6D99BA2EB1E32DF /* OnePageCreatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnePageCreatorViewModel.swift; sourceTree = "<group>"; };
@@ -421,6 +429,7 @@
 		B251D13FD22C87106551775A /* Product */ = {
 			isa = PBXGroup;
 			children = (
+				65E6D14764D24E3D93A1ED7A /* JSONAPIProductsDebugView.swift */,
 				370A769C969C707312A36EB2 /* ProductDetailView.swift */,
 				32DE531B59408CBED417C215 /* ProductEditView.swift */,
 				E61770B5221B245BDB58DFFF /* QuickProductView.swift */,
@@ -471,6 +480,7 @@
 				957937A24041C7E1791DBC36 /* Store */,
 				28ED34161E4D6E014297BCB7 /* Tabs */,
 				71F284B63516C7B8982FF438 /* Theme */,
+				94E3F8E876C34890B8B22A7E /* Voice */,
 				1F72CEFC12D5B9C685E15D66 /* Assets.xcassets */,
 				1C71612A5C1509ABC115C979 /* ContentView.swift */,
 				B405CED2BDDEFAFE0140472B /* Info.plist */,
@@ -514,8 +524,18 @@
 			children = (
 				A25DEB19ACCE5FFBFA7D3202 /* AuthSessionRefreshTests.swift */,
 				CE7C70CF4C50EFED8E516133 /* FunnelValuationTests.swift */,
+				F98CF44175DB4CB697110F7C /* VoiceAudioEngineTests.swift */,
 			);
 			path = RareImageryTests;
+			sourceTree = "<group>";
+		};
+		94E3F8E876C34890B8B22A7E /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				B7F815A8F9254C99B12578D9 /* PCMWavWriter.swift */,
+				669ECBD309354D22A98CF164 /* VoiceAudioEngine.swift */,
+			);
+			path = Voice;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -696,6 +716,9 @@
 				EC5D7ACA7A9F4CF512195421 /* Typography.swift in Sources */,
 				445D71CA2AFE1E9412AB4BE4 /* UserAsProductHero.swift in Sources */,
 				59DB8A431AE7B7F96E7A103D /* VideoCaptureService.swift in Sources */,
+				9FEDB37A141244C783FF14CA /* PCMWavWriter.swift in Sources */,
+				E81BAB1728C146D78A055F02 /* VoiceAudioEngine.swift in Sources */,
+				38D3F862DFD34A6E85DF6A85 /* JSONAPIProductsDebugView.swift in Sources */,
 				13BC694A3DB276945E411C16 /* WelcomeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -706,6 +729,7 @@
 			files = (
 				23E7E0AAECF018F556D78927 /* AuthSessionRefreshTests.swift in Sources */,
 				471AA2090CF3E82DCD926DFA /* FunnelValuationTests.swift in Sources */,
+				A0AB486670DC41DC89DF89BD /* VoiceAudioEngineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
