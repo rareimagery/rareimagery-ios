@@ -1,5 +1,29 @@
 import Foundation
 
+/// Matches the rareimagery_api (Drupal) error envelope:
+/// `{ "errors": [ { "status": "...", "code": "...", "detail": "..." } ] }`
+public struct APIErrorEnvelope: Decodable, Sendable, Equatable {
+    public struct Item: Decodable, Sendable, Equatable {
+        public let status: String
+        public let code: String
+        public let detail: String
+
+        public init(status: String, code: String, detail: String) {
+            self.status = status
+            self.code = code
+            self.detail = detail
+        }
+    }
+
+    public let errors: [Item]
+
+    public init(errors: [Item]) {
+        self.errors = errors
+    }
+
+    public var first: Item? { errors.first }
+}
+
 /// Matches the BFF's wrapped error envelope per CLAUDE.md §2.2:
 ///   `{ "error": { "code": "STRING_CODE", "message": "Human readable." } }`
 ///

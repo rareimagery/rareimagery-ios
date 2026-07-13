@@ -1,7 +1,11 @@
 import Foundation
 
-public enum APIError: Error, Sendable, Equatable {
+public enum APIError: Error, Sendable, Equatable, LocalizedError {
     case unauthorized
+    case forbidden
+    case validation(code: String, detail: String)
+    case conflict(code: String, detail: String)
+    case aiUnavailable
     case rateLimited(retryAfter: TimeInterval?)
     case quotaExceeded(QuotaInfo)
     case badRequest(code: MobileErrorCode?, message: String)
@@ -15,7 +19,7 @@ public enum APIError: Error, Sendable, Equatable {
 
     public var isRetryable: Bool {
         switch self {
-        case .network, .serverError, .rateLimited:
+        case .network, .serverError, .rateLimited, .aiUnavailable:
             return true
         default:
             return false
@@ -29,6 +33,8 @@ public enum APIError: Error, Sendable, Equatable {
         default: return nil
         }
     }
+
+    public var errorDescription: String? { userFacingMessage }
 
     /// Best-effort human-readable message for the UI layer.
     /// CLAUDE.md §4.2 mandates the SLUG_TAKEN / RESERVED_SLUG copy.
@@ -46,6 +52,12 @@ public enum APIError: Error, Sendable, Equatable {
             return "Couldn't read the server's response. (\(m))"
         case .notFound:
             return "Not found."
+        case .forbidden:
+            return "You don't have access to that."
+        case .validation(_, let detail), .conflict(_, let detail):
+            return detail
+        case .aiUnavailable:
+            return "Voice service is temporarily unavailable."
         case .rateLimited(let retry):
             if let r = retry { return "Too many requests. Try again in \(Int(r))s." }
             return "Too many requests. Please wait a moment."
@@ -58,8 +70,8 @@ public enum APIError: Error, Sendable, Equatable {
         case .badRequest(let code, let message),
              .serverError(_, let code, .some(let message)) where !message.isEmpty:
             return Self.localizedMessage(forCode: code, fallback: message)
-        case .serverError(_, let code, _):
-            return Self.localizedMessage(forCode: code, fallback: "Server error. Please try again.")
+        case .serverError(let status, let code, _):
+            return Self.localizedMessage(forCode: code, fallback: "Server error (\(status)).")
         }
     }
 

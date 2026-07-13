@@ -193,6 +193,41 @@ public actor ProductRepository {
         return try await client.send(endpoint)
     }
 
+    // MARK: - GET /jsonapi/commerce_product/capture  (Drupal JSON:API)
+
+    /// RULED 2026-07-13 (Option B): app products live on the dedicated
+    /// `capture` bundle (Drupal Task 4a). Legacy `physical` / `default`
+    /// bundles are not read here — filtering by bundle path excludes
+    /// sync-era products.
+    ///
+    /// Note: as of 2026-07-13 the `capture` bundle is not yet exposed
+    /// (live JSON:API returns 404). Callers should handle `.notFound` /
+    /// `.serverError` until Task 4a lands.
+    public func myProducts(productType: String = "capture") async throws -> [Product] {
+        let endpoints = await client.endpoints
+        var components = URLComponents(
+            url: endpoints.jsonAPI.appending(path: "commerce_product/\(productType)"),
+            resolvingAgainstBaseURL: false
+        )
+        // Own-products filtering: JSON:API `uid` filter availability varies by
+        // install; rely on permissions + authenticated session for now.
+        components?.queryItems = [
+            URLQueryItem(name: "page[limit]", value: "50"),
+            URLQueryItem(name: "sort", value: "-created"),
+        ]
+        guard let url = components?.url else {
+            throw APIError.invalidConfiguration("Could not build commerce_product JSON:API URL")
+        }
+
+        logger.info("myProducts: GET \(url.path) type=\(productType)")
+        let doc: JSONAPIDocument<ProductAttributes> = try await client.request(
+            JSONAPIDocument<ProductAttributes>.self,
+            url: url,
+            authenticated: true
+        )
+        return doc.data.map(Product.init(resource:))
+    }
+
     // MARK: - GET /api/stores/products  (the signed-in creator's products)
 
     /// Lists every product owned by the signed-in creator (drafts + live),
