@@ -293,6 +293,30 @@ public actor ProductRepository {
         _ = try await client.sendRaw(endpoint)
     }
 
+    // MARK: - POST /api/products/[uuid]/images
+
+    private struct AppendImagesRequest: Encodable {
+        let imageUrls: [String]
+    }
+
+    /// Appends 1–4 JPEG base64 data URLs to the product gallery.
+    public func appendImages(uuid: String, dataURLs: [String]) async throws -> ProductDetail {
+        guard !dataURLs.isEmpty else {
+            throw APIError.badRequest(code: nil, message: "appendImages called with zero images")
+        }
+        guard dataURLs.count <= 4 else {
+            throw APIError.badRequest(code: nil, message: "appendImages accepts at most 4 images")
+        }
+        let endpoint = try APIEndpoint.json(
+            path: "/api/products/\(uuid)/images",
+            method: .post,
+            body: AppendImagesRequest(imageUrls: dataURLs),
+            timeout: 60
+        )
+        _ = try await client.sendRaw(endpoint)
+        return try await get(uuid: uuid)
+    }
+
     // MARK: - POST /api/products/[uuid]/publish
 
     public func publish(uuid: String) async throws -> ProductDetail {

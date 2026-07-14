@@ -139,6 +139,9 @@ final class FunnelViewModel {
                 }
                 draftUuidForClip = result.draftUuid
                 valuation = FunnelValuation(from: result.draft)
+                if productMode && appState.session.isSignedIn {
+                    SpokenConfirmation.shared.speakProductCreated(title: result.draft.title)
+                }
             } catch {
                 errorMessage = String(describing: error)
                 os_log(.error, "funnel valuation failed: %{public}@", String(describing: error))
