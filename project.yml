@@ -111,6 +111,25 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ENABLE_PREVIEWS: YES
         SWIFT_OBJC_BRIDGING_HEADER: ""
+    preBuildScripts:
+      # Regression guard (docs/REGRESSION-2026-07-13.md, open question #3):
+      # a Release archive built without Release.local.xcconfig bakes
+      # placeholder OAuth IDs into the binary and ships a broken sign-in
+      # to TestFlight. Fail the build instead. Debug builds only warn —
+      # placeholders are legitimate there (mock/localhost workflows).
+      - name: Guard against placeholder auth config
+        basedOnDependencyAnalysis: false
+        shell: /bin/bash
+        script: |
+          bad=""
+          case "${X_CLIENT_ID:-}" in ""|REPLACE_ME*) bad="X_CLIENT_ID" ;; esac
+          if [ "${CONFIGURATION}" = "Release" ] && [ -n "$bad" ]; then
+            echo "error: ${bad} is unset/placeholder in a Release build. Create Configuration/Release.local.xcconfig with real values (see Debug.local.xcconfig.example) before archiving."
+            exit 1
+          fi
+          if [ -n "$bad" ]; then
+            echo "warning: ${bad} is a placeholder — sign-in will be disabled in this build."
+          fi
 
   RareImageryTests:
     type: bundle.unit-test

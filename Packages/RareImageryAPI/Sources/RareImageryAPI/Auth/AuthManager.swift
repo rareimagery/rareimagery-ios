@@ -137,6 +137,48 @@ public actor AuthManager {
         return set
     }
 
+    // MARK: - ADR-023 brokered sign-in (X via BFF → x_login at /oauth/token)
+
+    /// Step 1 of the brokered flow: mint the Drupal-leg PKCE pair. The
+    /// verifier stays in this actor; only the challenge travels (to the
+    /// BFF, which binds it into the one-time x_login code).
+    public func prepareBrokeredChallenge() throws -> String {
+        guard configuration.isOAuthClientConfigured else {
+            throw APIError.invalidConfiguration(
+                "Drupal OAuth client ID is not set. Create the rareimagery-ios " +
+                "simple_oauth consumer (T-014) and put its client_id in " +
+                "OAUTH_CLIENT_ID / Configuration/*.local.xcconfig."
+            )
+        }
+        let verifier = PKCE.generateVerifier()
+        pendingVerifier = verifier
+        pendingState = nil   // no authorize redirect in the brokered flow
+        return PKCE.challenge(for: verifier)
+    }
+
+    /// Step 4: exchange the broker-issued one-time code at Drupal
+    /// /oauth/token (grant_type=x_login) using the verifier from
+    /// `prepareBrokeredChallenge`. Persists and returns the token set.
+    @discardableResult
+    public func completeBrokeredSignIn(drupalCode: String) async throws -> TokenSet {
+        guard let verifier = pendingVerifier else {
+            throw APIError.authFailed("No PKCE verifier in memory — flow not started")
+        }
+        defer {
+            pendingVerifier = nil
+            pendingState = nil
+        }
+        let body = Self.form([
+            "grant_type": "x_login",
+            "client_id": configuration.oauthClientID,
+            "code": drupalCode,
+            "code_verifier": verifier,
+        ])
+        let set = try await tokenRequest(body: body)
+        logger.info("Brokered Drupal sign-in complete — tokens persisted")
+        return set
+    }
+
     // MARK: - Access token / refresh
 
     /// Returns a usable access token, refreshing when within 30s of expiry.

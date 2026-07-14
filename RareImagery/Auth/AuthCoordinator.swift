@@ -8,14 +8,36 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
 
     private let logger = APILogger(category: "AuthCoordinator")
 
+    /// ADR-023 brokered sign-in (T-016). The user proves identity via X in
+    /// the system browser; the BFF broker swaps the X code for a one-time
+    /// Drupal x_login code; the app exchanges that at Drupal /oauth/token.
+    /// The session lands as an oauth2_token row in Postgres. Drupal's own
+    /// login page is never involved — that was the fatal flaw of the old
+    /// authorize-URL flow this replaces (X users have no Drupal password).
     func signInWithDrupal(state: AppState) async {
         do {
-            let request = try await state.authManager.startSignIn()
+            // 1. Drupal-leg PKCE — verifier stays inside AuthManager.
+            let drupalChallenge = try await state.authManager.prepareBrokeredChallenge()
+
+            // 2. X leg in the system browser (same as the legacy flow).
+            let request = try await state.authService.startXAuth()
             let callbackURL = try await openWebSession(
                 url: request.authorizationURL,
                 scheme: request.callbackScheme
             )
-            let tokens = try await state.authManager.completeSignIn(callbackURL: callbackURL)
+
+            // 3. Broker: X code → one-time Drupal x_login code.
+            let exchange = try await state.authService.exchangeForDrupalCode(
+                callbackURL: callbackURL,
+                drupalCodeChallenge: drupalChallenge,
+                clientId: state.configuration.oauthClientID
+            )
+
+            // 4. Finish at Drupal /oauth/token.
+            let tokens = try await state.authManager.completeBrokeredSignIn(
+                drupalCode: exchange.drupalCode
+            )
+
             // Clear anonymous trial state — production OAuth takes over.
             try? await state.keychain.clearAnonymousState()
             state.session.applyOAuthTokens(
