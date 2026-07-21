@@ -87,4 +87,9 @@ public enum MobileErrorCode: String, Sendable {
     case mobileAuthFailed = "MOBILE_AUTH_FAILED"     // shared-auth middleware on products endpoints
     case unauthorized = "UNAUTHORIZED"                 // shared-auth middleware "No session cookie..."
     case appleAuthNotReady = "APPLE_AUTH_NOT_READY"  // /api/mobile/auth/apple/callback stub
+    // ADR-023 broker (/api/auth/x/exchange) + Drupal mint-code:
+    case unknownClient = "UNKNOWN_CLIENT"
+    case drupalMintFailed = "DRUPAL_MINT_FAILED"
+    case drupalError = "DRUPAL_ERROR"
+    case grantNotEnabled = "GRANT_NOT_ENABLED"
 }

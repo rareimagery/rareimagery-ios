@@ -14,6 +14,29 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
     /// The session lands as an oauth2_token row in Postgres. Drupal's own
     /// login page is never involved — that was the fatal flaw of the old
     /// authorize-URL flow this replaces (X users have no Drupal password).
+    ///
+    /// When `OAUTH_CLIENT_ID` is configured, this is the default X sign-in
+    /// path. The legacy BFF `/api/mobile/auth/x/callback` JWT mint is kept
+    /// only for builds without a Drupal consumer, or when a pending draft
+    /// claim must ride along (broker exchange doesn't accept draft params yet).
+    func signInWithX(
+        state: AppState,
+        draftToken: String? = nil,
+        draftUuid: String? = nil
+    ) async {
+        let needsLegacyDraftHandoff =
+            (draftToken?.isEmpty == false) || (draftUuid?.isEmpty == false)
+        if state.configuration.isOAuthClientConfigured && !needsLegacyDraftHandoff {
+            await signInWithDrupal(state: state)
+        } else {
+            await signInWithLegacyMobileJWT(
+                state: state,
+                draftToken: draftToken,
+                draftUuid: draftUuid
+            )
+        }
+    }
+
     func signInWithDrupal(state: AppState) async {
         do {
             // 1. Drupal-leg PKCE — verifier stays inside AuthManager.
@@ -44,6 +67,17 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
                 accessToken: tokens.accessToken,
                 expiresAt: tokens.expiresAt
             )
+            if let creator = exchange.creator {
+                state.session.creator = AuthTokenResponse.Creator(
+                    profileUuid: creator.profileUuid,
+                    storeUuid: creator.storeUuid,
+                    slug: creator.slug,
+                    handle: creator.handle,
+                    displayName: creator.displayName,
+                    avatarUrl: creator.avatarUrl,
+                    role: "CREATOR"
+                )
+            }
             state.session.hasSeenLivePreview = false
             state.session.hasSeenFunnel = false
         } catch let error as APIError {
@@ -55,7 +89,12 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
         }
     }
 
-    func signInWithX(state: AppState, draftToken: String? = nil, draftUuid: String? = nil) async {
+    /// Legacy mobile-JWT path — `POST /api/mobile/auth/x/callback`.
+    private func signInWithLegacyMobileJWT(
+        state: AppState,
+        draftToken: String? = nil,
+        draftUuid: String? = nil
+    ) async {
         do {
             let request = try await state.authService.startXAuth()
             let callbackURL = try await openWebSession(

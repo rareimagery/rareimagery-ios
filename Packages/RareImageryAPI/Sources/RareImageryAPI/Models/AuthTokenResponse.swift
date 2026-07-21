@@ -17,6 +17,24 @@ public struct AuthTokenResponse: Codable, Sendable, Equatable {
         public let displayName: String?
         public let avatarUrl: String?
         public let role: String?
+
+        public init(
+            profileUuid: String? = nil,
+            storeUuid: String? = nil,
+            slug: String? = nil,
+            handle: String? = nil,
+            displayName: String? = nil,
+            avatarUrl: String? = nil,
+            role: String? = nil
+        ) {
+            self.profileUuid = profileUuid
+            self.storeUuid = storeUuid
+            self.slug = slug
+            self.handle = handle
+            self.displayName = displayName
+            self.avatarUrl = avatarUrl
+            self.role = role
+        }
     }
 
     public init(

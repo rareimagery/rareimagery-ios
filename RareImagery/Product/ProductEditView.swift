@@ -78,14 +78,19 @@ struct ProductEditView: View {
                         .disabled(saving || publishing || uploadingImages || deleting)
                     }
 
+                    // Explicit red label — Button(role: .destructive) often loses
+                    // its system tint on the vault background and reads as missing.
                     Button(role: .destructive) {
                         showDeleteConfirm = true
                     } label: {
                         Text(deleting ? "Deleting…" : "Delete product")
                             .font(AppFont.buttonLabel)
+                            .foregroundStyle(Color.red.opacity(0.95))
                             .frame(maxWidth: .infinity).padding(.vertical, 13)
+                            .background(Color.red.opacity(0.12), in: Capsule())
                     }
                     .disabled(saving || publishing || uploadingImages || deleting)
+                    .accessibilityIdentifier("product.delete")
 
                     if let message {
                         Text(message).font(AppFont.caption)

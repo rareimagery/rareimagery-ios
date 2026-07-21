@@ -125,11 +125,7 @@ struct SignInView: View {
         Button {
             Task {
                 isAuthenticating = true
-                if usesDrupalOAuth {
-                    await coordinator.signInWithDrupal(state: state)
-                } else {
-                    await coordinator.signInWithX(state: state)
-                }
+                await coordinator.signInWithX(state: state)
                 isAuthenticating = false
             }
         } label: {
@@ -196,6 +192,23 @@ struct SignInView: View {
             return FriendlyError(
                 icon: "clock.arrow.circlepath",
                 message: "You were signed out. Sign in again to keep selling.",
+                canRetryTrial: false
+            )
+        }
+        if raw.localizedCaseInsensitiveContains("code_verifier")
+            || raw.localizedCaseInsensitiveContains("malformed code")
+            || raw.localizedCaseInsensitiveContains("invalid_grant") {
+            return FriendlyError(
+                icon: "arrow.triangle.2.circlepath",
+                message: "Sign-in timed out or was interrupted. Please try again.",
+                canRetryTrial: false
+            )
+        }
+        if raw.localizedCaseInsensitiveContains("client_id")
+            || raw.localizedCaseInsensitiveContains("not registered") {
+            return FriendlyError(
+                icon: "gearshape.fill",
+                message: "Sign-in isn't set up correctly for this build. Contact support if this persists.",
                 canRetryTrial: false
             )
         }

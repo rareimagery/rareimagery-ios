@@ -26,6 +26,12 @@ final class AppState {
     let salesRepository: SalesRepository
     let session: AuthSession
     let capture: CaptureSession
+    /// Finishes AuthManager → APIClient wiring started in `init`. Bootstrap
+    /// awaits this so launch refresh uses the Drupal OAuth handler, not a
+    /// racing fallback to the legacy BFF `/api/mobile/auth/refresh` route.
+    /// Optional var (assigned last in `init`) because the Task closure
+    /// captures `self`, which requires all stored properties initialized.
+    private var authWiringTask: Task<Void, Never>?
 
     /// ponytail: stub-everything data layer for the value-first funnel phase
     /// (build the frontend now, connect the backend later). When true,
@@ -43,7 +49,20 @@ final class AppState {
         self.keychain = keychain
         let client = APIClient(configuration: configuration, keychain: keychain)
         self.client = client
-        let authManager = AuthManager(configuration: configuration, keychain: keychain)
+        let authURLSession = URLSession(
+            configuration: {
+                let config = URLSessionConfiguration.default
+                config.timeoutIntervalForRequest = 20
+                config.timeoutIntervalForResource = 30
+                config.waitsForConnectivity = false
+                return config
+            }()
+        )
+        let authManager = AuthManager(
+            configuration: configuration,
+            keychain: keychain,
+            urlSession: authURLSession
+        )
         self.authManager = authManager
         self.authRepository = AuthRepository(client: client)
         self.authService = AuthService(configuration: configuration, repository: authRepository, client: client)
@@ -74,7 +93,7 @@ final class AppState {
         Analytics.configure(client: client, sessionId: UUID().uuidString.lowercased())
         self.capture = CaptureSession()
 
-        Task { [weak self] in
+        authWiringTask = Task { [weak self] in
             guard let self else { return }
             await self.authManager.install(on: self.client)
             await self.client.setAuthEventHandlers(AuthEventHandlers(
@@ -94,6 +113,10 @@ final class AppState {
                 }
             ))
         }
+    }
+
+    private func ensureAuthWiringReady() async {
+        await authWiringTask?.value
     }
 
     private func handleSessionInvalidated() async {
@@ -118,6 +141,14 @@ final class AppState {
     /// cleanest signal that whatever's in `.accessToken` is the trial JWT,
     /// not a production one — no need to decode the JWT itself to find out.
     func bootstrap() async {
+        defer {
+            if case .checking = session.status {
+                session.setSignedOut(
+                    error: "Couldn't start app session. Check your connection and try again."
+                )
+            }
+        }
+
         #if DEBUG
         // ponytail: useMocks means "no backend" — mint the anonymous session
         // locally so the value-first funnel is reachable offline. Real mint
@@ -131,6 +162,9 @@ final class AppState {
             return
         }
         #endif
+
+        await ensureAuthWiringReady()
+
         if await tryProductionSession() { return }
         if await tryExistingAnonymousSession() { return }
         await bootstrapAnonymous()
@@ -157,13 +191,19 @@ final class AppState {
             }
 
             if needsRefresh {
-                let tokens = try await client.refreshTokens()
-                session.applyOAuthTokens(accessToken: tokens.accessToken, expiresAt: tokens.accessTokenExpiresAt)
+                let refreshed = try await refreshProductionTokens()
+                session.applyOAuthTokens(
+                    accessToken: refreshed.accessToken,
+                    expiresAt: refreshed.expiresAt
+                )
             } else if let access {
                 session.applyOAuthTokens(accessToken: access, expiresAt: nil)
             } else {
-                let tokens = try await client.refreshTokens()
-                session.applyOAuthTokens(accessToken: tokens.accessToken, expiresAt: tokens.accessTokenExpiresAt)
+                let refreshed = try await refreshProductionTokens()
+                session.applyOAuthTokens(
+                    accessToken: refreshed.accessToken,
+                    expiresAt: refreshed.expiresAt
+                )
             }
             return true
         } catch {
@@ -172,6 +212,15 @@ final class AppState {
             session.setSignedOut(error: "Session expired. Please sign in again.")
             return true
         }
+    }
+
+    private func refreshProductionTokens() async throws -> (accessToken: String, expiresAt: Date?) {
+        if configuration.isOAuthClientConfigured {
+            let set = try await authManager.refreshTokens()
+            return (set.accessToken, set.expiresAt)
+        }
+        let tokens = try await client.refreshTokens()
+        return (tokens.accessToken, tokens.accessTokenExpiresAt)
     }
 
     private static func claims(from accessToken: String) -> MobileClaims? {
