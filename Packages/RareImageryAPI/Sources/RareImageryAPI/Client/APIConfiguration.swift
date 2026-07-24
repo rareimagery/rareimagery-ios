@@ -63,7 +63,15 @@ public struct APIConfiguration: Sendable {
     public static var fromBundle: APIConfiguration {
         let info = Bundle.main.infoDictionary ?? [:]
         let rawBase = (info["APIBaseURL"] as? String) ?? "https://www.rareimagery.net"
-        let baseURL = URL(string: rawBase) ?? URL(string: "https://www.rareimagery.net")!
+        // Require a host, not just a parseable URL: the xcconfig comment trap
+        // ("https://host" truncating to "https:") yields a non-nil URL whose
+        // requests resolve against relative hostnames like "api".
+        let baseURL: URL
+        if let parsed = URL(string: rawBase), parsed.host != nil {
+            baseURL = parsed
+        } else {
+            baseURL = URL(string: "https://www.rareimagery.net")!
+        }
         let xClient = (info["XClientID"] as? String) ?? ""
         let oauthClient = (info["OAuthClientID"] as? String) ?? ""
         let env = (info["Environment"] as? String) ?? "production"
