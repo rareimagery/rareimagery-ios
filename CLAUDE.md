@@ -156,7 +156,7 @@ mobile Bearer JWT. As a mobile caller, always send `Authorization: Bearer …`.
 | PATCH  | `/api/products/[uuid]`                 | Update title / desc / price                      |
 | DELETE | `/api/products/[uuid]`                 | Remove product                                   |
 | POST   | `/api/products/[uuid]/publish`         | Flip to published (no-op today, stable handle)   |
-| POST   | `/api/products/from-images`            | Multipart upload → Grok Vision → `ProductDraft`  |
+| POST   | `/api/products/from-images`            | JSON base64 → Grok Vision + create → `draft_id`  |
 
 **Auth model in Drupal:** `ProfileWriter::authorize()` matches the JWT's
 `handle` claim against `field_x_handle` on the linked `x_profile`. There is **no
@@ -220,19 +220,29 @@ mobile-auth variant under `/api/mobile/stores/check-slug` first.
 
 **Server-owned. Do not re-implement on-device.**
 
-`POST /api/products/from-images` (multipart) is the only entry point. It:
+`POST /api/products/from-images` (JSON, base64 data URLs) is the signed-in
+capture entry point. Unlike `/api/vision/analyze` (analysis-only), it runs Grok
+Vision **and** creates the Drupal product in one call. It:
 
-1. Uploads images to Drupal media entities.
-2. Calls Grok Vision (xAI) with a hero-image-first prompt (Phase G modular
-   pipeline, Claude fallback). See commits `1aeb9a9`, `4f8f02a`,
-   `f1aaed9` on the BFF for the prompt + taxonomy.
-3. Returns a `ProductDraft` (Swift model already in
-   `Models/ProductDraft.swift`).
+1. Takes `image_urls` — JPEG base64 data URLs (`data:image/jpeg;base64,…`), 1–4.
+2. Calls Grok Vision (xAI) with a hero-first prompt (Claude fallback). See
+   commits `1aeb9a9`, `4f8f02a`, `f1aaed9` on the BFF for the prompt + taxonomy.
+3. Returns `draft_id` (the created product UUID) plus a `MobileCaptureDraft`
+   (`Models/FromImages.swift`). The app PATCHes / publishes that UUID.
 
-**Hero-image rule:** the mobile filmstrip lets the user pick a hero shot. Send
-that shot's index in the multipart form as `hero_index` (0-based). The server
-only analyzes the hero — the rest are stored as gallery images. Do not send
-the same image twice to "force" a re-analysis.
+**Hero rule:** send `hero_only: false` when 2 favorites are selected so both
+inform analysis; the first `image_urls` entry is the hero. Don't send the same
+image twice to "force" a re-analysis.
+
+**Images need a follow-up:** from-images attaches **no** image on create — it
+only tries the preview URL and `isSafeImageUrl` rejects `data:` URLs (http(s)
+only). After create, attach every shot (hero included) via
+`POST /api/products/{uuid}/images`, which **does** accept base64 data URLs.
+See `ProductRepository.createFromImages` + `appendImages`; the capture
+coordinator does this automatically.
+
+`POST /api/vision/analyze` stays analysis-only (returns a `ProductDraft`, creates
+nothing) — used for the mock path and anonymous valuation.
 
 **Anti-pattern:** Don't try to call xAI / OpenAI / Claude directly from Swift.
 The single-vendor xAI policy (`687da5a`) lives on the server precisely so we

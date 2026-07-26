@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 import RareImageryAPI
 
 /// Edit a product — title, description, price, photos — then publish it to the store.
@@ -36,6 +37,9 @@ struct ProductEditView: View {
                         .frame(maxWidth: .infinity).padding(.top, 60)
                 } else {
                     statusBadge
+                    if isPublished, let link = loaded?.storefrontUrl, !link.isEmpty {
+                        publishedLinkCard(link)
+                    }
                     photosSection
 
                     field("Title") {
@@ -194,6 +198,39 @@ struct ProductEditView: View {
         Text(isPublished ? "LIVE ON STORE" : "UNPUBLISHED")
             .font(AppFont.mono(10, .semibold)).tracking(1.4)
             .foregroundStyle(isPublished ? AppColor.success : AppColor.gold)
+    }
+
+    /// Publish success card — the live storefront link with copy + share.
+    private func publishedLinkCard(_ urlString: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("You're live 🎉")
+                .font(AppFont.headline).foregroundStyle(AppColor.textPrimary)
+            Text(urlString)
+                .font(AppFont.mono(12, .regular))
+                .foregroundStyle(AppColor.gold)
+                .lineLimit(1).truncationMode(.middle)
+            HStack(spacing: 10) {
+                Button {
+                    UIPasteboard.general.string = urlString
+                    message = "Link copied."
+                } label: {
+                    Label("Copy link", systemImage: "doc.on.doc")
+                        .font(AppFont.buttonLabel)
+                }
+                .tint(AppColor.gold)
+                if let url = URL(string: urlString) {
+                    ShareLink(item: url) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                            .font(AppFont.buttonLabel)
+                    }
+                    .tint(AppColor.gold)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(AppColor.success.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(AppColor.success.opacity(0.5), lineWidth: 1))
     }
 
     private func field<Content: View>(_ label: String, @ViewBuilder _ content: () -> Content) -> some View {

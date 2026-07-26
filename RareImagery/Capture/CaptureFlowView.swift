@@ -11,8 +11,8 @@ struct CaptureFlowView: View {
             switch state.capture.phase {
             case .working:
                 overlay(title: "Analyzing", subtitle: "Reading your hero shot")
-            case .ready(_, let draft):
-                DraftPreview(draft: draft)
+            case .ready(let productId, let draft):
+                DraftPreview(productId: productId, draft: draft)
             case .error(let message):
                 errorBanner(message: message)
             case .idle, .picking:
@@ -60,6 +60,8 @@ struct CaptureFlowView: View {
 }
 
 private struct DraftPreview: View {
+    /// The Drupal product UUID `createFromImages` created — the edit/publish target.
+    let productId: String
     let draft: ProductDraft
     @Environment(AppState.self) private var state
     @State private var coordinator = AuthCoordinator()
@@ -126,7 +128,13 @@ private struct DraftPreview: View {
         }
         .background(AppColor.background)
         .sheet(isPresented: $showSell) {
-            QuickProductView(draft: draft, heroImageData: state.capture.hero?.jpegData)
+            // Phase 4D: the product already exists (createFromImages returned
+            // its UUID), so review/edit/publish on the production-tested editor
+            // rather than the QuickProductView stub.
+            NavigationStack {
+                ProductEditView(productId: productId)
+            }
+            .environment(state)
         }
     }
 
@@ -149,7 +157,7 @@ private struct DraftPreview: View {
         } label: {
             HStack(spacing: 8) {
                 if isAuthenticating { ProgressView().tint(.black) }
-                Text(isAuthenticating ? "Connecting to X…" : (state.session.isAnonymous ? "Claim this draft" : "Create your store to sell"))
+                Text(isAuthenticating ? "Connecting to X…" : (state.session.isAnonymous ? "Claim this draft" : "Review & publish"))
                     .font(AppFont.buttonLabel)
             }
             .foregroundStyle(.black)
@@ -205,7 +213,7 @@ enum CaptureCoordinator {
 
         let orderedShots: [CaptureSession.Shot] = {
             if let hero = capture.hero, capture.selectedFavoriteIds.contains(hero.id) {
-                var rest = selectedShots.filter { $0.id != hero.id }
+                let rest = selectedShots.filter { $0.id != hero.id }
                 return [hero] + rest
             } else {
                 return selectedShots
