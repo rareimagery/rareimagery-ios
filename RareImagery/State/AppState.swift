@@ -119,6 +119,16 @@ final class AppState {
         await authWiringTask?.value
     }
 
+    private func logAuthConfig() {
+        let logger = APILogger(category: "AppState")
+        let prefix = String(configuration.xClientID.prefix(8))
+        let mode = configuration.isOAuthClientConfigured ? "broker" : "legacy"
+        let host = configuration.baseURL.host ?? "?"
+        logger.info(
+            "auth config: mode=\(mode) xClient=\(prefix)… apiHost=\(host) xConfigured=\(configuration.isXClientIDConfigured) oauthConfigured=\(configuration.isOAuthClientConfigured)"
+        )
+    }
+
     private func handleSessionInvalidated() async {
         await authManager.signOut()
         try? await authService.signOut()
@@ -164,6 +174,7 @@ final class AppState {
         #endif
 
         await ensureAuthWiringReady()
+        logAuthConfig()
 
         if await tryProductionSession() { return }
         if await tryExistingAnonymousSession() { return }

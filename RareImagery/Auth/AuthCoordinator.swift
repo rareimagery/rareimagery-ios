@@ -81,11 +81,18 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
             state.session.hasSeenLivePreview = false
             state.session.hasSeenFunnel = false
         } catch let error as APIError {
-            logSignInFailure(error, path: "drupal")
-            state.session.setError(Self.message(for: error))
+            recordSignInFailure(error, path: "drupal", state: state)
         } catch {
             logger.error("Drupal sign-in unexpected error: \(error.localizedDescription)")
-            state.session.setError(error.localizedDescription)
+            let detail = error.localizedDescription
+            state.session.setSignInFailure(
+                AuthSession.SignInDiagnostic.from(
+                    configuration: state.configuration,
+                    path: "drupal",
+                    code: nil,
+                    detail: detail
+                )
+            )
         }
     }
 
@@ -122,19 +129,52 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
             try? await state.keychain.remove(.pendingDraftToken)
             try? await state.keychain.remove(.pendingDraftUuid)
         } catch let error as APIError {
-            logSignInFailure(error, path: "legacy-x-callback")
-            state.session.setError(Self.message(for: error))
+            recordSignInFailure(error, path: "legacy-x-callback", state: state)
         } catch {
             logger.error("X sign-in unexpected error: \(error.localizedDescription)")
-            state.session.setError(error.localizedDescription)
+            let detail = error.localizedDescription
+            state.session.setSignInFailure(
+                AuthSession.SignInDiagnostic.from(
+                    configuration: state.configuration,
+                    path: "legacy-x-callback",
+                    code: nil,
+                    detail: detail
+                )
+            )
         }
     }
 
-    private func logSignInFailure(_ error: APIError, path: String) {
+    private func recordSignInFailure(_ error: APIError, path: String, state: AppState) {
         if let code = error.code {
             logger.warning("Sign-in (\(path)) failed: code=\(code.rawValue) message=\(error.userFacingMessage)")
         } else {
             logger.warning("Sign-in (\(path)) failed: \(error.userFacingMessage)")
+        }
+        let detail = Self.message(for: error)
+        let codeString = error.code?.rawValue ?? Self.extractCode(from: error)
+        state.session.setSignInFailure(
+            AuthSession.SignInDiagnostic.from(
+                configuration: state.configuration,
+                path: path,
+                code: codeString,
+                detail: detail
+            )
+        )
+    }
+
+    private static func extractCode(from error: APIError) -> String? {
+        switch error {
+        case .authFailed(let message):
+            if message.hasPrefix("X returned error:") { return "X_OAUTH_ERROR" }
+            if message.contains("PKCE verifier") { return "PKCE_VERIFIER_LOST" }
+            if message.contains("State mismatch") { return "STATE_MISMATCH" }
+            return nil
+        case .decode:
+            return "DECODE_ERROR"
+        case .notFound:
+            return "NOT_FOUND"
+        default:
+            return nil
         }
     }
 

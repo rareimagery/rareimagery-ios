@@ -4,6 +4,69 @@ import RareImageryAPI
 @MainActor
 @Observable
 final class AuthSession {
+
+    /// Structured sign-in failure for TestFlight debugging (path, BFF code, build, client prefix).
+    struct SignInDiagnostic: Equatable {
+        let path: String
+        let code: String?
+        let detail: String
+        let build: String
+        let xClientPrefix: String
+        let apiHost: String
+        let authMode: String
+
+        var summaryLine: String {
+            let client = xClientPrefix.isEmpty ? "no-client" : "…\(xClientPrefix)"
+            let codePart = code.map { " · \($0)" } ?? ""
+            return "Build \(build) · \(authMode)\(codePart) · client \(client) · \(apiHost)"
+        }
+
+        var copyableText: String {
+            [
+                "build=\(build)",
+                "mode=\(authMode)",
+                "path=\(path)",
+                code.map { "code=\($0)" },
+                "clientPrefix=\(xClientPrefix)",
+                "apiHost=\(apiHost)",
+                "detail=\(detail)"
+            ]
+            .compactMap { $0 }
+            .joined(separator: "\n")
+        }
+
+        static func currentBuild() -> String {
+            (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? "?"
+        }
+
+        static func from(
+            configuration: APIConfiguration,
+            path: String,
+            code: String?,
+            detail: String
+        ) -> SignInDiagnostic {
+            let prefix = String(configuration.xClientID.prefix(8))
+            return SignInDiagnostic(
+                path: path,
+                code: code,
+                detail: detail,
+                build: currentBuild(),
+                xClientPrefix: prefix,
+                apiHost: configuration.baseURL.host ?? "?",
+                authMode: configuration.isOAuthClientConfigured ? "broker" : "legacy"
+            )
+        }
+
+        static func missingClientID(configuration: APIConfiguration) -> SignInDiagnostic {
+            from(
+                configuration: configuration,
+                path: "preflight",
+                code: "MISSING_X_CLIENT_ID",
+                detail: "This build has no X Client ID. Reinstall from the latest TestFlight build."
+            )
+        }
+    }
+
     enum Status: Equatable {
         case checking
         case signedOut
@@ -26,6 +89,7 @@ final class AuthSession {
     /// launches via `KeychainStore.anonymousFreeUsesUsed`.
     var freeUsesRemaining: Int = AuthSession.anonymousFreeUsesCap
     var lastError: String?
+    var lastSignInDiagnostic: SignInDiagnostic?
 
     /// Flag for the post-sign-in "You're live" screen (LivePreviewView).
     /// Starts false on each sign-in so freshly-signed-in users see the
@@ -100,6 +164,7 @@ final class AuthSession {
             self.status = .signedIn(claims)
             self.creator = tokens.creator
             self.lastError = nil
+            self.lastSignInDiagnostic = nil
             // Fresh sign-in always shows the live-preview welcome screen,
             // even if this is a returning user who previously dismissed it
             // on another device. Local-only flag — no server round-trip.
@@ -143,6 +208,7 @@ final class AuthSession {
             status = .signedIn(merged)
             self.creator = creator
             lastError = nil
+            lastSignInDiagnostic = nil
             hasSeenLivePreview = false
             hasSeenFunnel = false
             return
@@ -171,6 +237,7 @@ final class AuthSession {
             self.creator = creator
         }
         lastError = nil
+        lastSignInDiagnostic = nil
         hasSeenLivePreview = false
         hasSeenFunnel = false
     }
@@ -202,6 +269,7 @@ final class AuthSession {
         self.status = .signedIn(claims)
         self.creator = tokens.creator ?? self.creator
         self.lastError = nil
+        self.lastSignInDiagnostic = nil
     }
 
     /// Phase 3 — bootstrap into trial mode. The anonymous JWT has already
@@ -213,6 +281,7 @@ final class AuthSession {
         self.creator = nil
         self.freeUsesRemaining = freeUsesRemaining
         self.lastError = nil
+        self.lastSignInDiagnostic = nil
         self.hasSeenLivePreview = true  // trial users skip the welcome screen
     }
 
@@ -228,6 +297,7 @@ final class AuthSession {
         self.status = .signedOut
         self.creator = nil
         self.lastError = error
+        self.lastSignInDiagnostic = nil
         self.hasSeenLivePreview = false
         self.hasSeenFunnel = false
         self.freeUsesRemaining = AuthSession.anonymousFreeUsesCap
@@ -235,5 +305,10 @@ final class AuthSession {
 
     func setError(_ message: String) {
         self.lastError = message
+    }
+
+    func setSignInFailure(_ diagnostic: SignInDiagnostic) {
+        lastSignInDiagnostic = diagnostic
+        lastError = diagnostic.detail
     }
 }

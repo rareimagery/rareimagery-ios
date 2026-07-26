@@ -19,6 +19,7 @@ struct SignInView: View {
     @State private var coordinator = AuthCoordinator()
     @State private var isAuthenticating = false
     @State private var isRetryingTrial = false
+    @State private var diagnosticCopied = false
 
     private var usesDrupalOAuth: Bool {
         state.configuration.isOAuthClientConfigured
@@ -124,6 +125,12 @@ struct SignInView: View {
     private var primaryButton: some View {
         Button {
             Task {
+                guard state.configuration.isXClientIDConfigured else {
+                    state.session.setSignInFailure(
+                        .missingClientID(configuration: state.configuration)
+                    )
+                    return
+                }
                 isAuthenticating = true
                 await coordinator.signInWithX(state: state)
                 isAuthenticating = false
@@ -262,9 +269,16 @@ struct SignInView: View {
         }
         if raw == "Something went wrong."
             || raw == "Something went wrong on our end. Please try again." {
+            if let code = state.session.lastSignInDiagnostic?.code {
+                return FriendlyError(
+                    icon: "exclamationmark.triangle.fill",
+                    message: "Sign-in failed (\(code)). Please try again.",
+                    canRetryTrial: false
+                )
+            }
             return FriendlyError(
                 icon: "exclamationmark.triangle.fill",
-                message: "Sign-in didn't complete. Please try again.",
+                message: raw,
                 canRetryTrial: false
             )
         }
@@ -311,6 +325,10 @@ struct SignInView: View {
                 }
                 .disabled(isRetryingTrial)
             }
+
+            if let diagnostic = state.session.lastSignInDiagnostic {
+                diagnosticFooter(diagnostic)
+            }
         }
         .padding(14)
         .background(AppColor.surface.opacity(0.85), in: RoundedRectangle(cornerRadius: 14))
@@ -318,6 +336,30 @@ struct SignInView: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(AppColor.borderGold, lineWidth: 1)
         )
+    }
+
+    private func diagnosticFooter(_ diagnostic: AuthSession.SignInDiagnostic) -> some View {
+        VStack(spacing: 6) {
+            Text(diagnostic.summaryLine)
+                .font(AppFont.caption)
+                .foregroundStyle(AppColor.textSecondary.opacity(0.85))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                UIPasteboard.general.string = diagnostic.copyableText
+                diagnosticCopied = true
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    diagnosticCopied = false
+                }
+            } label: {
+                Text(diagnosticCopied ? "Copied" : "Copy details for support")
+                    .font(AppFont.caption)
+                    .foregroundStyle(AppColor.gold.opacity(0.9))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.top, 4)
     }
 
     // MARK: - Debug

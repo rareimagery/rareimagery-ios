@@ -36,4 +36,8 @@ if [ -n "${X_CLIENT_ID:-}" ] || [ -n "${OAUTH_CLIENT_ID:-}" ]; then
   echo "ci_post_clone: wrote Configuration/Release.local.xcconfig from Xcode Cloud env"
 else
   echo "ci_post_clone: X_CLIENT_ID not set — Release builds will use placeholder until workflow env is configured"
+  if [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ] || [ "${CI_XCODEBUILD_ACTION:-}" = "build-for-distribution" ]; then
+    echo "error: X_CLIENT_ID is required for Archive builds. Set it in Xcode Cloud workflow Environment variables."
+    exit 1
+  fi
 fi
