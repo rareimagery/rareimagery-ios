@@ -57,7 +57,7 @@ struct FirstProductCaptureView: View {
             // and we don't want unsolicited accepts.
             guard showCaptureSheet else { return }
             switch newPhase {
-            case .ready(let draft):
+            case .ready(_, let draft):
                 viewModel.acceptDraft(draft)
                 showCaptureSheet = false
             case .error(let message):

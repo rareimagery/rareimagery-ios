@@ -11,7 +11,7 @@ struct CaptureFlowView: View {
             switch state.capture.phase {
             case .working:
                 overlay(title: "Analyzing", subtitle: "Reading your hero shot")
-            case .ready(let draft):
+            case .ready(_, let draft):
                 DraftPreview(draft: draft)
             case .error(let message):
                 errorBanner(message: message)
@@ -191,7 +191,7 @@ enum CaptureCoordinator {
         // Flip `AppState.useMocks` to false to use the real productRepository.
         if state.useMocks {
             try? await Task.sleep(for: .seconds(1))
-            capture.phase = .ready(Self.mockDraft())
+            capture.phase = .ready(productId: "mock-draft", draft: Self.mockDraft())
             return
         }
 
@@ -215,19 +215,24 @@ enum CaptureCoordinator {
         let dataURLs = orderedShots.map { ImageCompression.toBase64DataURL($0.jpegData) }
 
         do {
-            // heroOnly: false since we may send 1-2; the backend will use all provided
-            // for analysis (and they become the product pictures).
-            let result = try await products.analyze(
+            // Persist path (Phase 4): analyze AND create the Drupal product in
+            // one call. heroOnly is false when 2 favorites are sent so both
+            // inform analysis; the first entry is the hero. `draftId` is the
+            // created product UUID — the PATCH/publish target.
+            let response = try await products.createFromImages(
                 dataURLs: dataURLs,
                 intent: capture.intent,
                 voiceTranscript: capture.voiceTranscript.isEmpty ? nil : capture.voiceTranscript,
-                heroOnly: false,
-                mode: .product
+                heroOnly: orderedShots.count == 1
             )
-            if let token = result.draftToken {
-                try? await state.keychain.set(token, for: .pendingDraftToken)
-            }
-            capture.phase = .ready(result.draft)
+
+            // from-images attaches no image on create — it rejects data: URLs
+            // (isSafeImageUrl), and the app sends base64 data URLs. Attach every
+            // shot now for the gallery, hero first. Best-effort: the product
+            // exists regardless, and photos can also be added later in review.
+            _ = try? await products.appendImages(uuid: response.draftId, dataURLs: dataURLs)
+
+            capture.phase = .ready(productId: response.draftId, draft: response.draft.toProductDraft())
         } catch {
             capture.phase = .error(message(error))
         }

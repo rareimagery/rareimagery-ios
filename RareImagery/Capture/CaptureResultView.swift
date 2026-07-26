@@ -177,7 +177,7 @@ struct CaptureResultView: View {
     }
 
     private var currentDraft: ProductDraft? {
-        if case .ready(let draft) = state.capture.phase {
+        if case .ready(_, let draft) = state.capture.phase {
             return draft
         }
         return nil

@@ -87,6 +87,60 @@ public actor ProductRepository {
         return try await client.send(endpoint)
     }
 
+    // MARK: - POST /api/products/from-images  (Phase 4 — analyze + create product)
+    //
+    // Unlike `analyze` (analysis-only), this persists: the BFF runs Grok
+    // analyze AND createProduct, returning `draft_id` — the Drupal product UUID
+    // the caller then PATCHes and publishes. The route gates on
+    // requireSessionOrMobile, so a Drupal RS256 Bearer works.
+    //
+    // IMAGES: the server attaches only `preview_image_url` on create, and only
+    // if it's an http(s) URL (isSafeImageUrl rejects `data:`). Because the app
+    // sends base64 data URLs, NO image is attached on create — the caller must
+    // follow up with `appendImages(uuid:dataURLs:)` for every shot it wants in
+    // the gallery (including the hero).
+
+    /// Analyze `dataURLs` (JPEG base64 data URLs, 1–4) and create a Drupal
+    /// product in one call. Returns `draft_id` (the product UUID) plus the
+    /// mobile draft. `heroOnly` mirrors `analyze`: when false the server
+    /// analyzes every provided image; the first entry is the hero.
+    public func createFromImages(
+        dataURLs: [String],
+        intent: ProductIntent = .resell,
+        voiceTranscript: String? = nil,
+        heroOnly: Bool = false,
+        storeUuid: String? = nil,
+        source: String = "photo"
+    ) async throws -> FromImagesResponse {
+        guard !dataURLs.isEmpty else {
+            throw APIError.badRequest(code: nil, message: "createFromImages called with zero images")
+        }
+        guard dataURLs.count <= 4 else {
+            throw APIError.badRequest(code: nil, message: "createFromImages accepts at most 4 images, got \(dataURLs.count)")
+        }
+
+        let body = FromImagesRequest(
+            imageUrls: dataURLs,
+            heroOnly: heroOnly,
+            voiceTranscript: voiceTranscript?.isEmpty == true ? nil : voiceTranscript,
+            productIntent: AnalyzeIntent(from: intent).rawValue,
+            storeUuid: storeUuid,
+            metadata: FromImagesRequest.Metadata(source: source)
+        )
+
+        // APIEndpoint.json encodes with .convertToSnakeCase — the from-images
+        // route expects snake_case (image_urls, hero_only, product_intent, …).
+        let endpoint = try APIEndpoint.json(
+            path: "/api/products/from-images",
+            method: .post,
+            body: body,
+            requiresAuth: true,
+            timeout: 90  // Grok analyze + Drupal create cascade
+        )
+        logger.info("createFromImages: \(dataURLs.count) images, intent=\(intent.rawValue), heroOnly=\(heroOnly)")
+        return try await client.send(endpoint)
+    }
+
     // MARK: - POST /api/v1/vision/value  (anonymous pre-login valuation)
     //
     // Value-first funnel contract (postdates VALUE-FIRST-OAUTH.md's

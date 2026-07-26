@@ -20,7 +20,10 @@ final class CaptureSession {
         case idle
         case picking
         case working   // multipart upload + server-side Grok analysis happen together
-        case ready(ProductDraft)
+        // Phase 4: `createFromImages` persists a Drupal product, so `ready`
+        // now carries its UUID (`productId`) — the PATCH/publish target for
+        // the review screen — alongside the draft used to prefill the UI.
+        case ready(productId: String, draft: ProductDraft)
         case error(String)
     }
 
