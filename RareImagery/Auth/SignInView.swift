@@ -205,10 +205,66 @@ struct SignInView: View {
             )
         }
         if raw.localizedCaseInsensitiveContains("client_id")
-            || raw.localizedCaseInsensitiveContains("not registered") {
+            || raw.localizedCaseInsensitiveContains("not registered")
+            || raw.contains("UNKNOWN_CLIENT") {
             return FriendlyError(
                 icon: "gearshape.fill",
                 message: "Sign-in isn't set up correctly for this build. Contact support if this persists.",
+                canRetryTrial: false
+            )
+        }
+        if raw.contains("X_TOKEN_EXCHANGE_FAILED")
+            || raw.localizedCaseInsensitiveContains("x returned") {
+            return FriendlyError(
+                icon: "arrow.triangle.2.circlepath",
+                message: "X couldn't verify your account. Make sure you're using the app linked to the correct X account, then try again.",
+                canRetryTrial: false
+            )
+        }
+        if raw.contains("SERVER_MISCONFIGURED")
+            || raw.contains("MOBILE_JWT_SECRET")
+            || raw.contains("SECRET_MISSING") {
+            return FriendlyError(
+                icon: "exclamationmark.triangle.fill",
+                message: "Sign-in is temporarily unavailable on our side. Please try again in a few minutes.",
+                canRetryTrial: false
+            )
+        }
+        if raw.contains("DRUPAL_PROVISION_FAILED")
+            || raw.contains("DRUPAL_ERROR")
+            || raw.contains("DRUPAL_MINT_FAILED") {
+            return FriendlyError(
+                icon: "exclamationmark.triangle.fill",
+                message: "We couldn't finish setting up your store. Please try again — contact support if it keeps failing.",
+                canRetryTrial: false
+            )
+        }
+        if raw.contains("SLUG_TAKEN") {
+            return FriendlyError(
+                icon: "person.crop.circle.badge.exclamationmark",
+                message: "Your X handle is already in use or restricted. Contact support if this is your verified handle.",
+                canRetryTrial: false
+            )
+        }
+        if raw.contains("RESERVED_SLUG") {
+            return FriendlyError(
+                icon: "person.crop.circle.badge.exclamationmark",
+                message: "Your X handle conflicts with a reserved name. Pick a different handle on X or contact support.",
+                canRetryTrial: false
+            )
+        }
+        if raw.contains("Sign-in failed (") {
+            return FriendlyError(
+                icon: "exclamationmark.triangle.fill",
+                message: raw,
+                canRetryTrial: false
+            )
+        }
+        if raw == "Something went wrong."
+            || raw == "Something went wrong on our end. Please try again." {
+            return FriendlyError(
+                icon: "exclamationmark.triangle.fill",
+                message: "Sign-in didn't complete. Please try again.",
                 canRetryTrial: false
             )
         }

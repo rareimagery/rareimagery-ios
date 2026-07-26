@@ -79,7 +79,22 @@ Manual QA on TestFlight build:
 
 | Symptom | Fix |
 |---------|-----|
-| X sign-in fails on TestFlight | Set `X_CLIENT_ID` in Release.local.xcconfig or Xcode Cloud env |
+| X sign-in fails on TestFlight | Set `X_CLIENT_ID` in Release.local.xcconfig or Xcode Cloud env. **Must match** production BFF `X_CLIENT_ID`. |
+| "Sign-in temporarily unavailable" / `SERVER_MISCONFIGURED` | BFF missing `MOBILE_JWT_SECRET` or `X_CLIENT_SECRET`. Check `GET https://rareimagery.net/api/health/mobile-auth`. |
+| `X_TOKEN_EXCHANGE_FAILED` | Register `rareimagery://auth/callback` in X developer portal for the same OAuth 2.0 app as `X_CLIENT_ID`. |
+| `DRUPAL_PROVISION_FAILED` | Drupal unreachable from BFF or creator provision error — check BFF logs for `/api/creator/provision`. |
 | Xcode Cloud: scheme not found | Use `RareImageryStudio`; shared scheme must be committed |
 | OAuth redirect error | Register `rareimagery://auth/callback` in X developer portal |
 | Build uses placeholder client ID | CI log should show `wrote Configuration/Release.local.xcconfig` |
+| ADR-023 broker (future) | Also set `OAUTH_CLIENT_ID` in Xcode Cloud + BFF `DRUPAL_OAUTH_CLIENT_IDS`, `X_BFF_SHARED_SECRET`, nginx `/oauth/token` → Drupal. See `x-store-drupal/ai-memory/runbooks/ios-oauth-signin.md`. |
+
+### Server smoke tests (before shipping TestFlight)
+
+```bash
+# BFF mobile auth config (legacy path must be healthy)
+curl -sS https://rareimagery.net/api/health/mobile-auth | jq .
+
+# Callback route exists (expect 400 BAD_REQUEST, not 404 HTML)
+curl -sS -X POST https://rareimagery.net/api/mobile/auth/x/callback \
+  -H 'Content-Type: application/json' -d '{}'
+```

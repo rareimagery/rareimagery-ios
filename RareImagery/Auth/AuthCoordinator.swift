@@ -65,24 +65,24 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
             try? await state.keychain.clearAnonymousState()
             state.session.applyOAuthTokens(
                 accessToken: tokens.accessToken,
-                expiresAt: tokens.expiresAt
+                expiresAt: tokens.expiresAt,
+                creator: exchange.creator.map {
+                    AuthTokenResponse.Creator(
+                        profileUuid: $0.profileUuid,
+                        storeUuid: $0.storeUuid,
+                        slug: $0.slug,
+                        handle: $0.handle,
+                        displayName: $0.displayName,
+                        avatarUrl: $0.avatarUrl,
+                        role: "CREATOR"
+                    )
+                }
             )
-            if let creator = exchange.creator {
-                state.session.creator = AuthTokenResponse.Creator(
-                    profileUuid: creator.profileUuid,
-                    storeUuid: creator.storeUuid,
-                    slug: creator.slug,
-                    handle: creator.handle,
-                    displayName: creator.displayName,
-                    avatarUrl: creator.avatarUrl,
-                    role: "CREATOR"
-                )
-            }
             state.session.hasSeenLivePreview = false
             state.session.hasSeenFunnel = false
         } catch let error as APIError {
-            logger.warning("Drupal sign-in failed: \(error.userFacingMessage)")
-            state.session.setError(error.userFacingMessage)
+            logSignInFailure(error, path: "drupal")
+            state.session.setError(Self.message(for: error))
         } catch {
             logger.error("Drupal sign-in unexpected error: \(error.localizedDescription)")
             state.session.setError(error.localizedDescription)
@@ -122,16 +122,33 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
             try? await state.keychain.remove(.pendingDraftToken)
             try? await state.keychain.remove(.pendingDraftUuid)
         } catch let error as APIError {
-            if let code = error.code {
-                logger.warning("X sign-in failed: code=\(code.rawValue), reason=\(error.userFacingMessage)")
-            } else {
-                logger.warning("X sign-in failed: \(error.userFacingMessage)")
-            }
-            state.session.setError(error.userFacingMessage)
+            logSignInFailure(error, path: "legacy-x-callback")
+            state.session.setError(Self.message(for: error))
         } catch {
             logger.error("X sign-in unexpected error: \(error.localizedDescription)")
             state.session.setError(error.localizedDescription)
         }
+    }
+
+    private func logSignInFailure(_ error: APIError, path: String) {
+        if let code = error.code {
+            logger.warning("Sign-in (\(path)) failed: code=\(code.rawValue) message=\(error.userFacingMessage)")
+        } else {
+            logger.warning("Sign-in (\(path)) failed: \(error.userFacingMessage)")
+        }
+    }
+
+    /// User-visible copy — include error code when the server message is generic.
+    private static func message(for error: APIError) -> String {
+        let text = error.userFacingMessage
+        guard let code = error.code else { return text }
+        let generic = text.isEmpty
+            || text == "Something went wrong."
+            || text == "Something went wrong on our end. Please try again."
+        if generic {
+            return "Sign-in failed (\(code.rawValue)). Please try again."
+        }
+        return text
     }
 
     private func openWebSession(url: URL, scheme: String) async throws -> URL {

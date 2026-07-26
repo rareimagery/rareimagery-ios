@@ -119,34 +119,81 @@ final class AuthSession {
 
     /// Prefer MobileClaims when the access token is a BFF JWT; otherwise build
     /// a session from a Drupal simple_oauth JWT (or opaque token + expiry).
-    func applyOAuthTokens(accessToken: String, expiresAt: Date?) {
+    /// Pass `creator` from the ADR-023 broker exchange when the Drupal JWT
+    /// lacks storeUuid/slug — keeps ContentView out of the legacy onboarding wizard.
+    func applyOAuthTokens(
+        accessToken: String,
+        expiresAt: Date?,
+        creator: AuthTokenResponse.Creator? = nil
+    ) {
         if let claims = try? JWTDecoder.decode(accessToken) {
             applyRefresh(
                 tokens: AuthTokenResponse(
                     accessToken: accessToken,
                     refreshToken: "",
-                    expiresIn: max(0, Int(claims.expiresAt.timeIntervalSinceNow))
+                    expiresIn: max(0, Int(claims.expiresAt.timeIntervalSinceNow)),
+                    creator: creator
                 ),
-                claims: claims
+                claims: mergeClaims(claims, creator: creator)
             )
             return
         }
         if let claims = try? JWTDecoder.decodePayload(accessToken) {
-            status = .signedIn(claims)
-            creator = nil
+            let merged = mergeClaims(claims, creator: creator)
+            status = .signedIn(merged)
+            self.creator = creator
             lastError = nil
+            hasSeenLivePreview = false
+            hasSeenFunnel = false
             return
         }
         let exp = expiresAt ?? Date().addingTimeInterval(3600)
-        status = .signedIn(MobileClaims(
-            sub: "oauth-user",
-            aud: "drupal",
-            exp: Int(exp.timeIntervalSince1970)
-        ))
-        creator = nil
+        if let creator,
+           let profileUuid = creator.profileUuid,
+           let storeUuid = creator.storeUuid,
+           let slug = creator.slug {
+            status = .signedIn(MobileClaims(
+                sub: profileUuid,
+                storeUuid: storeUuid,
+                slug: slug,
+                handle: creator.handle,
+                role: creator.role,
+                aud: "drupal",
+                exp: Int(exp.timeIntervalSince1970)
+            ))
+            self.creator = creator
+        } else {
+            status = .signedIn(MobileClaims(
+                sub: "oauth-user",
+                aud: "drupal",
+                exp: Int(exp.timeIntervalSince1970)
+            ))
+            self.creator = creator
+        }
         lastError = nil
         hasSeenLivePreview = false
         hasSeenFunnel = false
+    }
+
+    /// Fill store identity from the broker `creator` block when JWT claims omit them.
+    private func mergeClaims(_ claims: MobileClaims, creator: AuthTokenResponse.Creator?) -> MobileClaims {
+        guard let creator else { return claims }
+        let storeUuid = claims.storeUuid ?? creator.storeUuid
+        let slug = claims.slug ?? creator.slug
+        let handle = claims.handle ?? creator.handle
+        if storeUuid == claims.storeUuid && slug == claims.slug && handle == claims.handle {
+            return claims
+        }
+        return MobileClaims(
+            sub: claims.sub,
+            storeUuid: storeUuid,
+            slug: slug,
+            handle: handle,
+            role: claims.role ?? creator.role,
+            aud: claims.aud,
+            exp: claims.exp,
+            iat: claims.iat
+        )
     }
 
     /// Updates session after a silent token refresh. Unlike `apply(tokens:)`,

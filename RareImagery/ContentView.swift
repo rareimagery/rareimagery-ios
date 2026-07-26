@@ -35,7 +35,7 @@ struct ContentView: View {
             SignInView()
 
         case .signedIn(let claims):
-            if needsLegacyOnboarding(claims) {
+            if needsLegacyOnboarding(claims, creator: state.session.creator) {
                 // Defensive fallback — shouldn't fire because CreatorProvisioner
                 // mints storeUuid/slug atomically at sign-in. If the wire ever
                 // decouples, the old wizard catches it.
@@ -61,8 +61,16 @@ struct ContentView: View {
         }
     }
 
-    private func needsLegacyOnboarding(_ claims: MobileClaims) -> Bool {
-        (claims.storeUuid ?? "").isEmpty || (claims.slug ?? "").isEmpty
+    private func needsLegacyOnboarding(
+        _ claims: MobileClaims,
+        creator: AuthTokenResponse.Creator?
+    ) -> Bool {
+        if let creator,
+           !(creator.storeUuid ?? "").isEmpty,
+           !(creator.slug ?? "").isEmpty {
+            return false
+        }
+        return (claims.storeUuid ?? "").isEmpty || (claims.slug ?? "").isEmpty
     }
 
 }

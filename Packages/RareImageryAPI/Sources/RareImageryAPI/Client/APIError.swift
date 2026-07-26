@@ -130,6 +130,10 @@ public enum APIError: Error, Sendable, Equatable, LocalizedError {
                 : fallback
         case .grantNotEnabled:
             return "Sign-in isn't configured for this app yet. Contact support."
+        case .validationFailed:
+            return fallback.isEmpty
+                ? "Sign-in request was invalid. Please try again."
+                : fallback
         case .badRequest:
             return fallback
         }
