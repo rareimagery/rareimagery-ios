@@ -118,6 +118,22 @@ public enum APIError: Error, Sendable, Equatable, LocalizedError {
             return "Your session is invalid. Please sign in again."
         case .appleAuthNotReady:
             return "Apple Sign-In isn't ready yet. Use Continue with X."
+        case .unknownClient:
+            return "This app build isn't registered for sign-in. Update the app or contact support."
+        case .drupalMintFailed:
+            return fallback.isEmpty
+                ? "We couldn't finish signing you in. Please try again."
+                : fallback
+        case .drupalError:
+            return fallback.isEmpty
+                ? "We couldn't finish setting up your store. Please try again."
+                : fallback
+        case .grantNotEnabled:
+            return "Sign-in isn't configured for this app yet. Contact support."
+        case .validationFailed:
+            return fallback.isEmpty
+                ? "Sign-in request was invalid. Please try again."
+                : fallback
         case .badRequest:
             return fallback
         }

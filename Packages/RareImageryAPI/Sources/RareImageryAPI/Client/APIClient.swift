@@ -29,7 +29,9 @@ public actor APIClient {
             let config = URLSessionConfiguration.default
             config.timeoutIntervalForRequest = 30
             config.timeoutIntervalForResource = 60
-            config.waitsForConnectivity = true
+            // Launch bootstrap must fail fast when the BFF is down — waiting
+            // for connectivity can leave ContentView on the spinner indefinitely.
+            config.waitsForConnectivity = false
             self.session = URLSession(configuration: config)
         }
     }

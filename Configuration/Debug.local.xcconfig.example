@@ -11,4 +11,11 @@
 //   Paste the consumer UUID below.
 
 X_CLIENT_ID = paste_your_x_oauth_client_id_here
+# Optional: when ADR-023 broker infra is live, paste the Drupal simple_oauth
+# consumer UUID here. While unset/placeholder, TestFlight uses legacy JWT sign-in.
 OAUTH_CLIENT_ID = paste_your_simple_oauth_consumer_uuid_here
+
+# Local dev note: Debug uses API_BASE_URL=http://localhost:3000 for the BFF.
+# Drupal OAuth (/oauth/token) is on production or a local Drupal :8080 stack.
+# For full broker testing, point API_BASE_URL at https://rareimagery.net or
+# add a future DRUPAL_BASE_URL split — see ai-memory/runbooks/ios-oauth-signin.md

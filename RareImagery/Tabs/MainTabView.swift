@@ -401,17 +401,15 @@ struct ProfileTabView: View {
     }
 }
 
-/// The four capsule tabs: the branded Bud "RareImagery" home tab, Friends,
-/// Products (edit + publish the creator's listings), Profile — with the Shop
-/// button in the center. The public store preview (Page) lives under
-/// Profile → "My page".
+/// Capsule tabs: Home, Products, Profile — Shop in the center.
+/// Friends / Rare Circle is unwired from navigation (Build A); view files
+/// (`FriendsTabView`, `CircleTabView`, etc.) stay for later repurposing.
 enum RareTab: CaseIterable {
-    case home, friends, products, profile
+    case home, products, profile
 
     var label: String {
         switch self {
         case .home: "RareImagery"
-        case .friends: "Friends"
         case .products: "Products"
         case .profile: "Profile"
         }
@@ -420,7 +418,6 @@ enum RareTab: CaseIterable {
     var icon: String {
         switch self {
         case .home: "house"           // fallback only — home renders Bud
-        case .friends: "person.2"
         case .products: "shippingbox"
         case .profile: "person.crop.circle"
         }
@@ -439,8 +436,6 @@ struct RareTabBar: View {
     var body: some View {
         HStack(spacing: 4) {
             tabButton(.home)
-            tabButton(.friends)
-
 
             // Center — Shop (transparent variant: 34pt icon, muted label)
             Button(action: onShop) {
@@ -562,7 +557,6 @@ struct MainTabView: View {
     @ViewBuilder private var content: some View {
         switch tab {
         case .home: HomeTabView(onProductCreated: { tab = .products })
-        case .friends: FriendsTabView()
         case .products: ProductsTabView()
         case .profile: ProfileTabView()
         }

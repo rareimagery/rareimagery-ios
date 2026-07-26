@@ -8,32 +8,93 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
 
     private let logger = APILogger(category: "AuthCoordinator")
 
+    /// ADR-023 brokered sign-in (T-016). The user proves identity via X in
+    /// the system browser; the BFF broker swaps the X code for a one-time
+    /// Drupal x_login code; the app exchanges that at Drupal /oauth/token.
+    /// The session lands as an oauth2_token row in Postgres. Drupal's own
+    /// login page is never involved — that was the fatal flaw of the old
+    /// authorize-URL flow this replaces (X users have no Drupal password).
+    ///
+    /// When `OAUTH_CLIENT_ID` is configured, this is the default X sign-in
+    /// path. The legacy BFF `/api/mobile/auth/x/callback` JWT mint is kept
+    /// only for builds without a Drupal consumer, or when a pending draft
+    /// claim must ride along (broker exchange doesn't accept draft params yet).
+    func signInWithX(
+        state: AppState,
+        draftToken: String? = nil,
+        draftUuid: String? = nil
+    ) async {
+        let needsLegacyDraftHandoff =
+            (draftToken?.isEmpty == false) || (draftUuid?.isEmpty == false)
+        if state.configuration.isOAuthClientConfigured && !needsLegacyDraftHandoff {
+            await signInWithDrupal(state: state)
+        } else {
+            await signInWithLegacyMobileJWT(
+                state: state,
+                draftToken: draftToken,
+                draftUuid: draftUuid
+            )
+        }
+    }
+
     func signInWithDrupal(state: AppState) async {
         do {
-            let request = try await state.authManager.startSignIn()
+            // 1. Drupal-leg PKCE — verifier stays inside AuthManager.
+            let drupalChallenge = try await state.authManager.prepareBrokeredChallenge()
+
+            // 2. X leg in the system browser (same as the legacy flow).
+            let request = try await state.authService.startXAuth()
             let callbackURL = try await openWebSession(
                 url: request.authorizationURL,
                 scheme: request.callbackScheme
             )
-            let tokens = try await state.authManager.completeSignIn(callbackURL: callbackURL)
+
+            // 3. Broker: X code → one-time Drupal x_login code.
+            let exchange = try await state.authService.exchangeForDrupalCode(
+                callbackURL: callbackURL,
+                drupalCodeChallenge: drupalChallenge,
+                clientId: state.configuration.oauthClientID
+            )
+
+            // 4. Finish at Drupal /oauth/token.
+            let tokens = try await state.authManager.completeBrokeredSignIn(
+                drupalCode: exchange.drupalCode
+            )
+
             // Clear anonymous trial state — production OAuth takes over.
             try? await state.keychain.clearAnonymousState()
             state.session.applyOAuthTokens(
                 accessToken: tokens.accessToken,
-                expiresAt: tokens.expiresAt
+                expiresAt: tokens.expiresAt,
+                creator: exchange.creator.map {
+                    AuthTokenResponse.Creator(
+                        profileUuid: $0.profileUuid,
+                        storeUuid: $0.storeUuid,
+                        slug: $0.slug,
+                        handle: $0.handle,
+                        displayName: $0.displayName,
+                        avatarUrl: $0.avatarUrl,
+                        role: "CREATOR"
+                    )
+                }
             )
             state.session.hasSeenLivePreview = false
             state.session.hasSeenFunnel = false
         } catch let error as APIError {
-            logger.warning("Drupal sign-in failed: \(error.userFacingMessage)")
-            state.session.setError(error.userFacingMessage)
+            logSignInFailure(error, path: "drupal")
+            state.session.setError(Self.message(for: error))
         } catch {
             logger.error("Drupal sign-in unexpected error: \(error.localizedDescription)")
             state.session.setError(error.localizedDescription)
         }
     }
 
-    func signInWithX(state: AppState, draftToken: String? = nil, draftUuid: String? = nil) async {
+    /// Legacy mobile-JWT path — `POST /api/mobile/auth/x/callback`.
+    private func signInWithLegacyMobileJWT(
+        state: AppState,
+        draftToken: String? = nil,
+        draftUuid: String? = nil
+    ) async {
         do {
             let request = try await state.authService.startXAuth()
             let callbackURL = try await openWebSession(
@@ -61,16 +122,33 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
             try? await state.keychain.remove(.pendingDraftToken)
             try? await state.keychain.remove(.pendingDraftUuid)
         } catch let error as APIError {
-            if let code = error.code {
-                logger.warning("X sign-in failed: code=\(code.rawValue), reason=\(error.userFacingMessage)")
-            } else {
-                logger.warning("X sign-in failed: \(error.userFacingMessage)")
-            }
-            state.session.setError(error.userFacingMessage)
+            logSignInFailure(error, path: "legacy-x-callback")
+            state.session.setError(Self.message(for: error))
         } catch {
             logger.error("X sign-in unexpected error: \(error.localizedDescription)")
             state.session.setError(error.localizedDescription)
         }
+    }
+
+    private func logSignInFailure(_ error: APIError, path: String) {
+        if let code = error.code {
+            logger.warning("Sign-in (\(path)) failed: code=\(code.rawValue) message=\(error.userFacingMessage)")
+        } else {
+            logger.warning("Sign-in (\(path)) failed: \(error.userFacingMessage)")
+        }
+    }
+
+    /// User-visible copy — include error code when the server message is generic.
+    private static func message(for error: APIError) -> String {
+        let text = error.userFacingMessage
+        guard let code = error.code else { return text }
+        let generic = text.isEmpty
+            || text == "Something went wrong."
+            || text == "Something went wrong on our end. Please try again."
+        if generic {
+            return "Sign-in failed (\(code.rawValue)). Please try again."
+        }
+        return text
     }
 
     private func openWebSession(url: URL, scheme: String) async throws -> URL {

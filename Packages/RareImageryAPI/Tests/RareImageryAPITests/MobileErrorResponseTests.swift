@@ -38,5 +38,11 @@ final class MobileErrorResponseTests: XCTestCase {
 
         let network = APIError.network(URLError(.notConnectedToInternet))
         XCTAssertFalse(network.requiresSupportContact)
+
+        let mint = APIError.serverError(status: 502, code: .drupalMintFailed, message: "mint-code returned 500")
+        XCTAssertTrue(mint.userFacingMessage.contains("mint-code"))
+
+        let unknownClient = APIError.badRequest(code: .unknownClient, message: "client_id is not registered with this broker.")
+        XCTAssertTrue(unknownClient.userFacingMessage.contains("registered"))
     }
 }

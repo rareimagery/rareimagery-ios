@@ -137,6 +137,48 @@ public actor AuthManager {
         return set
     }
 
+    // MARK: - ADR-023 brokered sign-in (X via BFF → x_login at /oauth/token)
+
+    /// Step 1 of the brokered flow: mint the Drupal-leg PKCE pair. The
+    /// verifier stays in this actor; only the challenge travels (to the
+    /// BFF, which binds it into the one-time x_login code).
+    public func prepareBrokeredChallenge() throws -> String {
+        guard configuration.isOAuthClientConfigured else {
+            throw APIError.invalidConfiguration(
+                "Drupal OAuth client ID is not set. Create the rareimagery-ios " +
+                "simple_oauth consumer (T-014) and put its client_id in " +
+                "OAUTH_CLIENT_ID / Configuration/*.local.xcconfig."
+            )
+        }
+        let verifier = PKCE.generateVerifier()
+        pendingVerifier = verifier
+        pendingState = nil   // no authorize redirect in the brokered flow
+        return PKCE.challenge(for: verifier)
+    }
+
+    /// Step 4: exchange the broker-issued one-time code at Drupal
+    /// /oauth/token (grant_type=x_login) using the verifier from
+    /// `prepareBrokeredChallenge`. Persists and returns the token set.
+    @discardableResult
+    public func completeBrokeredSignIn(drupalCode: String) async throws -> TokenSet {
+        guard let verifier = pendingVerifier else {
+            throw APIError.authFailed("No PKCE verifier in memory — flow not started")
+        }
+        defer {
+            pendingVerifier = nil
+            pendingState = nil
+        }
+        let body = Self.form([
+            "grant_type": "x_login",
+            "client_id": configuration.oauthClientID,
+            "code": drupalCode,
+            "code_verifier": verifier,
+        ])
+        let set = try await tokenRequest(body: body)
+        logger.info("Brokered Drupal sign-in complete — tokens persisted")
+        return set
+    }
+
     // MARK: - Access token / refresh
 
     /// Returns a usable access token, refreshing when within 30s of expiry.
@@ -216,6 +258,7 @@ public actor AuthManager {
         var req = URLRequest(url: configuration.endpoints.oauthToken)
         req.httpMethod = "POST"
         req.httpBody = body
+        req.timeoutInterval = 20
         req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         req.setValue("application/json", forHTTPHeaderField: "Accept")
 
@@ -233,9 +276,17 @@ public actor AuthManager {
             throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
         }
         guard http.statusCode == 200 else {
-            logger.warning("Token endpoint failed — status=\(http.statusCode)")
-            await signOut()
-            throw APIError.unauthorized
+            let snippet = String(data: data, encoding: .utf8)?.prefix(200) ?? ""
+            logger.warning("Token endpoint failed — status=\(http.statusCode) body=\(snippet)")
+            let oauthError = try? JSONDecoder().decode(OAuthErrorBody.self, from: data)
+            let message = oauthError?.userFacingMessage
+                ?? "Sign-in failed (HTTP \(http.statusCode))."
+            // Only wipe persisted tokens when a refresh fails — not during the
+            // initial brokered x_login exchange (there may be nothing stored yet).
+            if Self.formFields(from: body)["grant_type"] == "refresh_token" {
+                await signOut()
+            }
+            throw APIError.authFailed(message)
         }
 
         let decoded: OAuthTokenResponse
@@ -258,6 +309,37 @@ public actor AuthManager {
             ISO8601DateFormatter().string(from: set.expiresAt),
             for: .accessTokenExpiry
         )
+    }
+
+    private struct OAuthErrorBody: Decodable {
+        let error: String?
+        let errorDescription: String?
+        let hint: String?
+
+        enum CodingKeys: String, CodingKey {
+            case error
+            case errorDescription = "error_description"
+            case hint
+        }
+
+        var userFacingMessage: String? {
+            if let errorDescription, !errorDescription.isEmpty { return errorDescription }
+            if let hint, !hint.isEmpty { return hint }
+            if let error, !error.isEmpty { return error }
+            return nil
+        }
+    }
+
+    private static func formFields(from body: Data) -> [String: String] {
+        guard let raw = String(data: body, encoding: .utf8) else { return [:] }
+        var fields: [String: String] = [:]
+        for pair in raw.split(separator: "&") {
+            let parts = pair.split(separator: "=", maxSplits: 1).map(String.init)
+            guard let key = parts.first else { continue }
+            let value = parts.count > 1 ? parts[1] : ""
+            fields[key] = value.removingPercentEncoding ?? value
+        }
+        return fields
     }
 
     /// application/x-www-form-urlencoded body (RFC 1866 space-as-plus).

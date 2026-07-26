@@ -20,11 +20,20 @@ echo "ci_post_clone: RareImagery.xcodeproj generated OK"
 
 # Xcode Cloud: inject X OAuth client ID for Release Archive builds.
 # Set X_CLIENT_ID as an environment variable in the workflow settings.
+# Optional: set OAUTH_CLIENT_ID when ADR-023 broker infra is live (Drupal
+# simple_oauth consumer UUID). When unset, Release builds use the legacy
+# BFF /api/mobile/auth/x/callback JWT path (TestFlight default today).
 # Writes gitignored Configuration/Release.local.xcconfig so Release.xcconfig
 # picks up the real value via #include? "Release.local.xcconfig".
-if [ -n "${X_CLIENT_ID:-}" ]; then
-  printf 'X_CLIENT_ID = %s\n' "$X_CLIENT_ID" > Configuration/Release.local.xcconfig
-  echo "ci_post_clone: wrote Configuration/Release.local.xcconfig from X_CLIENT_ID env"
+if [ -n "${X_CLIENT_ID:-}" ] || [ -n "${OAUTH_CLIENT_ID:-}" ]; then
+  : > Configuration/Release.local.xcconfig
+  if [ -n "${X_CLIENT_ID:-}" ]; then
+    printf 'X_CLIENT_ID = %s\n' "$X_CLIENT_ID" >> Configuration/Release.local.xcconfig
+  fi
+  if [ -n "${OAUTH_CLIENT_ID:-}" ]; then
+    printf 'OAUTH_CLIENT_ID = %s\n' "$OAUTH_CLIENT_ID" >> Configuration/Release.local.xcconfig
+  fi
+  echo "ci_post_clone: wrote Configuration/Release.local.xcconfig from Xcode Cloud env"
 else
   echo "ci_post_clone: X_CLIENT_ID not set — Release builds will use placeholder until workflow env is configured"
 fi
