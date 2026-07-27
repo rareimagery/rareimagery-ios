@@ -124,6 +124,10 @@ public enum APIError: Error, Sendable, Equatable, LocalizedError {
             return fallback.isEmpty
                 ? "We couldn't finish signing you in. Please try again."
                 : fallback
+        case .needsSlug:
+            return fallback.isEmpty
+                ? "Choose a storefront slug to finish creating your account."
+                : fallback
         case .drupalError:
             return fallback.isEmpty
                 ? "We couldn't finish setting up your store. Please try again."

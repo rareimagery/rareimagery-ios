@@ -7,6 +7,8 @@ public struct APIConfiguration: Sendable {
     public let xCallbackPath: String
     /// simple_oauth consumer UUID (public client). From Phase D-A.
     public let oauthClientID: String
+    /// Google OAuth iOS client ID (native sign-in). Phase multi-provider.
+    public let googleIOSClientID: String
     /// Drupal OAuth redirect — must match the consumer redirect URI.
     public let oauthCallbackPath: String
     public let environment: String
@@ -42,12 +44,23 @@ public struct APIConfiguration: Sendable {
         ])
     }
 
+    /// True when Google native sign-in client ID is wired.
+    public var isGoogleClientConfigured: Bool {
+        Self.isConfiguredClientID(googleIOSClientID, placeholders: [
+            "REPLACE_ME",
+            "paste_your",
+            "YOUR_GOOGLE",
+            "GOOGLE_IOS"
+        ])
+    }
+
     public init(
         baseURL: URL,
         xClientID: String,
         xCallbackScheme: String = "rareimagery",
         xCallbackPath: String = "/callback",
         oauthClientID: String = "",
+        googleIOSClientID: String = "",
         oauthCallbackPath: String = "/callback",
         environment: String = "production"
     ) {
@@ -56,6 +69,7 @@ public struct APIConfiguration: Sendable {
         self.xCallbackScheme = xCallbackScheme
         self.xCallbackPath = xCallbackPath
         self.oauthClientID = oauthClientID
+        self.googleIOSClientID = googleIOSClientID
         self.oauthCallbackPath = oauthCallbackPath
         self.environment = environment
     }
@@ -74,11 +88,13 @@ public struct APIConfiguration: Sendable {
         }
         let xClient = (info["XClientID"] as? String) ?? ""
         let oauthClient = (info["OAuthClientID"] as? String) ?? ""
+        let googleClient = (info["GoogleIOSClientID"] as? String) ?? ""
         let env = (info["Environment"] as? String) ?? "production"
         return APIConfiguration(
             baseURL: baseURL,
             xClientID: xClient,
             oauthClientID: oauthClient,
+            googleIOSClientID: googleClient,
             environment: env
         )
     }

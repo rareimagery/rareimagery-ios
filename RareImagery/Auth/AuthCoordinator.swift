@@ -7,6 +7,11 @@ import RareImageryAPI
 final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextProviding {
 
     private let logger = APILogger(category: "AuthCoordinator")
+    private let appleSignIn = AppleSignInController()
+    private let googleSignIn = GoogleSignInController()
+
+    /// Called when Apple/Google exchange returns NEEDS_SLUG. Return the chosen slug or nil to cancel.
+    var slugPicker: ((AuthService.ProviderSlugRequired, String) async -> String?)?
 
     /// ADR-023 brokered sign-in (T-016). The user proves identity via X in
     /// the system browser; the BFF broker swaps the X code for a one-time
@@ -33,6 +38,185 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
                 state: state,
                 draftToken: draftToken,
                 draftUuid: draftUuid
+            )
+        }
+    }
+
+    func signInWithApple(state: AppState) async {
+        guard state.configuration.isOAuthClientConfigured else {
+            state.session.setSignInFailure(
+                AuthSession.SignInDiagnostic.from(
+                    configuration: state.configuration,
+                    path: "apple",
+                    code: "SERVER_MISCONFIGURED",
+                    detail: "Drupal OAuth client is not configured."
+                )
+            )
+            return
+        }
+        let appleResult = await appleSignIn.signIn()
+        switch appleResult {
+        case .cancelled:
+            return
+        case .failed(let message):
+            state.session.setSignInFailure(
+                AuthSession.SignInDiagnostic.from(
+                    configuration: state.configuration,
+                    path: "apple",
+                    code: nil,
+                    detail: message
+                )
+            )
+            return
+        case .success(let identityToken, let fullName):
+            await completeProviderBroker(
+                state: state,
+                path: "/api/auth/apple/exchange",
+                identityToken: identityToken,
+                fullName: fullName,
+                signInPath: "apple"
+            ) { token, challenge, clientId in
+                try await state.authService.exchangeAppleForDrupalCode(
+                    identityToken: token,
+                    fullName: fullName,
+                    drupalCodeChallenge: challenge,
+                    clientId: clientId
+                )
+            } slugPick: { ticket, slug, challenge, clientId in
+                try await state.authService.completeProviderSlugPick(
+                    path: "/api/auth/apple/exchange",
+                    ticket: ticket,
+                    slug: slug,
+                    drupalCodeChallenge: challenge,
+                    clientId: clientId
+                )
+            }
+        }
+    }
+
+    func signInWithGoogle(state: AppState, presenting viewController: UIViewController) async {
+        guard state.configuration.isOAuthClientConfigured else {
+            state.session.setSignInFailure(
+                AuthSession.SignInDiagnostic.from(
+                    configuration: state.configuration,
+                    path: "google",
+                    code: "SERVER_MISCONFIGURED",
+                    detail: "Drupal OAuth client is not configured."
+                )
+            )
+            return
+        }
+        guard state.configuration.isGoogleClientConfigured else {
+            state.session.setSignInFailure(
+                AuthSession.SignInDiagnostic.from(
+                    configuration: state.configuration,
+                    path: "google",
+                    code: "SERVER_MISCONFIGURED",
+                    detail: "Google client ID is not configured in this build."
+                )
+            )
+            return
+        }
+        let googleResult = await googleSignIn.signIn(
+            clientID: state.configuration.googleIOSClientID,
+            presenting: viewController
+        )
+        switch googleResult {
+        case .cancelled:
+            return
+        case .failed(let message):
+            state.session.setSignInFailure(
+                AuthSession.SignInDiagnostic.from(
+                    configuration: state.configuration,
+                    path: "google",
+                    code: nil,
+                    detail: message
+                )
+            )
+            return
+        case .success(let identityToken):
+            await completeProviderBroker(
+                state: state,
+                path: "/api/auth/google/exchange",
+                identityToken: identityToken,
+                fullName: nil,
+                signInPath: "google"
+            ) { token, challenge, clientId in
+                try await state.authService.exchangeGoogleForDrupalCode(
+                    identityToken: token,
+                    drupalCodeChallenge: challenge,
+                    clientId: clientId
+                )
+            } slugPick: { ticket, slug, challenge, clientId in
+                try await state.authService.completeProviderSlugPick(
+                    path: "/api/auth/google/exchange",
+                    ticket: ticket,
+                    slug: slug,
+                    drupalCodeChallenge: challenge,
+                    clientId: clientId
+                )
+            }
+        }
+    }
+
+    private func completeProviderBroker(
+        state: AppState,
+        path: String,
+        identityToken: String,
+        fullName: String?,
+        signInPath: String,
+        exchange: (_ identityToken: String, _ challenge: String, _ clientId: String) async throws -> AuthService.ProviderExchangeOutcome,
+        slugPick: (_ ticket: String, _ slug: String, _ challenge: String, _ clientId: String) async throws -> AuthService.DrupalExchange
+    ) async {
+        do {
+            let challenge = try await state.authManager.prepareBrokeredChallenge()
+            let clientId = state.configuration.oauthClientID
+            let outcome = try await exchange(identityToken, challenge, clientId)
+            let drupalExchange: AuthService.DrupalExchange
+            switch outcome {
+            case .completed(let ex):
+                drupalExchange = ex
+            case .needsSlug(let req):
+                guard let picker = slugPicker else {
+                    throw APIError.authFailed("Slug picker not configured.")
+                }
+                guard let slug = await picker(req, path) else {
+                    return
+                }
+                drupalExchange = try await slugPick(req.ticket, slug, challenge, clientId)
+            }
+            let tokens = try await state.authManager.completeBrokeredSignIn(
+                drupalCode: drupalExchange.drupalCode
+            )
+            try? await state.keychain.clearAnonymousState()
+            state.session.applyOAuthTokens(
+                accessToken: tokens.accessToken,
+                expiresAt: tokens.expiresAt,
+                creator: drupalExchange.creator.map {
+                    AuthTokenResponse.Creator(
+                        profileUuid: $0.profileUuid,
+                        storeUuid: $0.storeUuid,
+                        slug: $0.slug,
+                        handle: $0.handle,
+                        displayName: $0.displayName,
+                        avatarUrl: $0.avatarUrl,
+                        role: "CREATOR"
+                    )
+                }
+            )
+            state.session.hasSeenLivePreview = false
+            state.session.hasSeenFunnel = false
+        } catch let error as APIError {
+            recordSignInFailure(error, path: signInPath, state: state)
+        } catch {
+            logger.error("\(signInPath) sign-in unexpected error: \(error.localizedDescription)")
+            state.session.setSignInFailure(
+                AuthSession.SignInDiagnostic.from(
+                    configuration: state.configuration,
+                    path: signInPath,
+                    code: nil,
+                    detail: error.localizedDescription
+                )
             )
         }
     }
@@ -191,6 +375,37 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
         return text
     }
 
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        let scenes = UIApplication.shared.connectedScenes
+        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
+            ?? scenes.compactMap { $0 as? UIWindowScene }.first
+        if let window = windowScene?.windows.first(where: \.isKeyWindow) {
+            return window
+        }
+        if let window = windowScene?.windows.first {
+            return window
+        }
+        return ASPresentationAnchor()
+    }
+
+    /// Link X enrichment for Apple/Google creators (Phase E). Returns handle on success.
+    func linkXAccount(state: AppState) async -> String? {
+        do {
+            let request = try await state.authService.startXAuth(scopes: ["tweet.read", "users.read"])
+            let callbackURL = try await openWebSession(
+                url: request.authorizationURL,
+                scheme: request.callbackScheme
+            )
+            return try await state.authService.linkXAccount(callbackURL: callbackURL)
+        } catch let error as APIError where error == .authCancelled {
+            return nil
+        } catch {
+            logger.warning("Link X failed: \(error.localizedDescription)")
+            state.session.setError(error.localizedDescription)
+            return nil
+        }
+    }
+
     private func openWebSession(url: URL, scheme: String) async throws -> URL {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<URL, Error>) in
             let session = ASWebAuthenticationSession(
@@ -218,19 +433,6 @@ final class AuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPro
                 cont.resume(throwing: APIError.authFailed("ASWebAuthenticationSession.start returned false"))
             }
         }
-    }
-
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        let scenes = UIApplication.shared.connectedScenes
-        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
-            ?? scenes.compactMap { $0 as? UIWindowScene }.first
-        if let window = windowScene?.windows.first(where: \.isKeyWindow) {
-            return window
-        }
-        if let window = windowScene?.windows.first {
-            return window
-        }
-        return ASPresentationAnchor()
     }
 
 }

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		01AB4021D43BC0B59DC21126 /* FunnelInstructionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17F41B93E445972F2541A6F3 /* FunnelInstructionsView.swift */; };
+		047FA46D5C61A76548C22D14 /* SlugPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73910EDBA06A33AC2375BF82 /* SlugPickerView.swift */; };
+		04CADC59E9E70C625D5A4834 /* LinkXAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90A1B83E342ECD20357C2D4 /* LinkXAccountView.swift */; };
 		0696CF3AC1702E7C6D1D3112 /* QuickProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61770B5221B245BDB58DFFF /* QuickProductView.swift */; };
 		0C839E041DA00AFA2DA15730 /* CaptureResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C0B96D20614F7078C45F10 /* CaptureResultView.swift */; };
 		13BC694A3DB276945E411C16 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BA2090B7F71F812E883BDE3 /* WelcomeView.swift */; };
@@ -61,12 +63,14 @@
 		94CBE3F547DF5D0DE40D4490 /* SpaceGrotesk-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 243151C6232E4A659BE9C9F6 /* SpaceGrotesk-Regular.ttf */; };
 		95F57ECBDFD05FD33E48BEC5 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDCD1B9443C189BC2396C17B /* CaptureView.swift */; };
 		9AE9C4508BF72AA323E3B876 /* SpaceGrotesk-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 59D46B5FD96DC41F5FC8C8F9 /* SpaceGrotesk-Medium.ttf */; };
+		9D127B9B93BE357DB894E4E3 /* GoogleSignInController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 685C435FA7FA8DD287983A8C /* GoogleSignInController.swift */; };
 		A588D09313726CC649A0A18C /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA54BC1FD4F0B21E40964DA6 /* SignInView.swift */; };
 		AF78E9D9C0D93561D96E38BB /* FunnelValuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 142C822B445F8F4B8F0E3F69 /* FunnelValuation.swift */; };
 		B002A6511784AE18ADFCF288 /* FunnelRecordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD45CEA404D519945DF8A038 /* FunnelRecordView.swift */; };
 		B4EB35A3E141A2DCCB19434F /* CircleService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE4A815D880C857E8A0A22F3 /* CircleService.swift */; };
 		B539422182195D9DC86E17B7 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BDCD0660F95DE50D5A40B5F /* ErrorBanner.swift */; };
 		BA550E671858740D907E4D04 /* AtCapWarningCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0AB6B91D37AAF5454979B4 /* AtCapWarningCard.swift */; };
+		BDC3AA5FAA8B10BDB918F8D5 /* AppleSignInController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE5741AA438FAB54608046D /* AppleSignInController.swift */; };
 		BEEA07E02A57678098FA876B /* FirstProductCompleteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FCDFD8855D68A45188B1E9D /* FirstProductCompleteView.swift */; };
 		C0F1703F87E92E12A378C8CF /* FrameSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9A15EDDAB66A583FBFAF052 /* FrameSelector.swift */; };
 		C1D966BCBEE37310AAEF8E37 /* FunnelProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAA6D9D045D368FC6EAE3A04 /* FunnelProcessingView.swift */; };
@@ -77,6 +81,7 @@
 		CCC38AC5A9E684AFCB8D2334 /* RareImageryAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 3F89A9971143FA71AB0087DB /* RareImageryAPI */; };
 		CD7F15CA32FBBCEEF305A775 /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1001196AB02F77E8D882CA0 /* PermissionsView.swift */; };
 		CD835F3E891F05B874AB42A0 /* HankenGrotesk-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CD0FD1955B2BD364649C29DD /* HankenGrotesk-Regular.ttf */; };
+		CD8981B5F59CC303706CD86D /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 3697C7648FC52564FA8022C9 /* GoogleSignIn */; };
 		CED6E627BF86B84BEDA630FC /* ProductEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DE531B59408CBED417C215 /* ProductEditView.swift */; };
 		CEEA4D5E804E091D619001A3 /* PCMWavWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CE229E078A2080884DE30B /* PCMWavWriter.swift */; };
 		D7FF6C2E5DF83132ADD31EEF /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE1FC66BF80C1F7A13F18F5F /* DiscoverView.swift */; };
@@ -140,6 +145,7 @@
 		4785F8684A744A724222D719 /* FunnelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FunnelView.swift; sourceTree = "<group>"; };
 		4A3AFA70E74630BB46CBE400 /* ShopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopView.swift; sourceTree = "<group>"; };
 		4BA2090B7F71F812E883BDE3 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		4CEDD31D0DFE041C92806FDA /* RareImagery.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RareImagery.entitlements; sourceTree = "<group>"; };
 		51521D46956BCCD06BE98A89 /* GrokSuggestionsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GrokSuggestionsSection.swift; sourceTree = "<group>"; };
 		527765DD2EB411F5FD8F4CAC /* SignUpReminderBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpReminderBanner.swift; sourceTree = "<group>"; };
 		567D6688D4E093F76A2024E2 /* MerchProductKind.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchProductKind.swift; sourceTree = "<group>"; };
@@ -149,7 +155,10 @@
 		5EBD2D5957439105AD4E5BE7 /* LivePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePreviewView.swift; sourceTree = "<group>"; };
 		615F3D0AE201A49D27AB9E72 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		64DC757CB538E12E5FFEEEED /* StoreEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreEditorView.swift; sourceTree = "<group>"; };
+		685C435FA7FA8DD287983A8C /* GoogleSignInController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignInController.swift; sourceTree = "<group>"; };
 		6A5C9E47A9BA61B3EB253B9A /* CaptureFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureFlowView.swift; sourceTree = "<group>"; };
+		6DE5741AA438FAB54608046D /* AppleSignInController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInController.swift; sourceTree = "<group>"; };
+		73910EDBA06A33AC2375BF82 /* SlugPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlugPickerView.swift; sourceTree = "<group>"; };
 		7F96E5FD76CE6544994DB079 /* HankenGrotesk-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "HankenGrotesk-Bold.ttf"; sourceTree = "<group>"; };
 		8117CA6DD6C3DFE2094C16CB /* FirstProductFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirstProductFlowView.swift; sourceTree = "<group>"; };
 		8237A5ED94A3FFF4C7AB46AF /* Chip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chip.swift; sourceTree = "<group>"; };
@@ -171,6 +180,7 @@
 		B43BC09E6E428A4CB45E1DCE /* VoiceAudioEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAudioEngine.swift; sourceTree = "<group>"; };
 		B4DBB39E220862E500A9BAF2 /* JetBrainsMono-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "JetBrainsMono-Regular.ttf"; sourceTree = "<group>"; };
 		B880D0340C2C0456856E12A4 /* SpaceGrotesk-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SpaceGrotesk-Bold.ttf"; sourceTree = "<group>"; };
+		B90A1B83E342ECD20357C2D4 /* LinkXAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkXAccountView.swift; sourceTree = "<group>"; };
 		BB7C589A72AB8E84699F5092 /* ImageCompression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCompression.swift; sourceTree = "<group>"; };
 		BC740D732D449C8F368EA70E /* HankenGrotesk-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "HankenGrotesk-SemiBold.ttf"; sourceTree = "<group>"; };
 		C17582AC46D5933932600E5E /* JSONAPIProductsDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONAPIProductsDebugView.swift; sourceTree = "<group>"; };
@@ -211,6 +221,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCC38AC5A9E684AFCB8D2334 /* RareImageryAPI in Frameworks */,
+				CD8981B5F59CC303706CD86D /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -496,6 +507,7 @@
 				1F72CEFC12D5B9C685E15D66 /* Assets.xcassets */,
 				1C71612A5C1509ABC115C979 /* ContentView.swift */,
 				B405CED2BDDEFAFE0140472B /* Info.plist */,
+				4CEDD31D0DFE041C92806FDA /* RareImagery.entitlements */,
 				D3DA7227F4A46289A6B15786 /* RareImageryApp.swift */,
 			);
 			path = RareImagery;
@@ -525,8 +537,12 @@
 		ECCA696B7E7C95A920A80D3E /* Auth */ = {
 			isa = PBXGroup;
 			children = (
+				6DE5741AA438FAB54608046D /* AppleSignInController.swift */,
 				ACDEF011E42BC89A2AEE3A2F /* AuthCoordinator.swift */,
+				685C435FA7FA8DD287983A8C /* GoogleSignInController.swift */,
+				B90A1B83E342ECD20357C2D4 /* LinkXAccountView.swift */,
 				DA54BC1FD4F0B21E40964DA6 /* SignInView.swift */,
+				73910EDBA06A33AC2375BF82 /* SlugPickerView.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -578,6 +594,7 @@
 			name = RareImagery;
 			packageProductDependencies = (
 				3F89A9971143FA71AB0087DB /* RareImageryAPI */,
+				3697C7648FC52564FA8022C9 /* GoogleSignIn */,
 			);
 			productName = RareImagery;
 			productReference = 118FF32B2F2FF2E70D73A3C1 /* RareImagery.app */;
@@ -612,6 +629,7 @@
 			mainGroup = 3E765655BF5C45251F037F6C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				18192FBE69732057AC9B545C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				F4C8C6A333C2EE7EBFF24670 /* XCLocalSwiftPackageReference "Packages/RareImageryAPI" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -665,7 +683,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "bad=\"\"\ncase \"${X_CLIENT_ID:-}\" in \"\"|REPLACE_ME*) bad=\"X_CLIENT_ID\" ;; esac\nbase=\"${API_BASE_URL:-}\"\nbase_msg=\"\"\ncase \"$base\" in\n  \"\")\n    base_msg=\"API_BASE_URL is unset.\" ;;\n  http:|https:|http:/|https:/|http://|https://)\n    base_msg=\"API_BASE_URL is '${base}' — no host. In xcconfig, // starts a comment, so 'https://host' truncates to '${base%%/*}'. Write it as https:/\\$()/host instead.\" ;;\n  http://*|https://*)\n    host=\"${base#*://}\"; host=\"${host%%/*}\"; host=\"${host%%:*}\"\n    case \"$host\" in\n      *.*|localhost) ;;\n      *) base_msg=\"API_BASE_URL '${base}' has host '${host}' with no dot — looks truncated or malformed.\" ;;\n    esac ;;\n  *)\n    base_msg=\"API_BASE_URL '${base}' is not an http(s):// URL. In xcconfig, write it as https:/\\$()/host so // is not eaten as a comment.\" ;;\nesac\nif [ \"${CONFIGURATION}\" = \"Release\" ]; then\n  if [ -n \"$bad\" ]; then\n    echo \"error: ${bad} is unset/placeholder in a Release build. Create Configuration/Release.local.xcconfig with real values (see Debug.local.xcconfig.example) before archiving.\"\n    exit 1\n  fi\n  if [ -n \"$base_msg\" ]; then\n    echo \"error: ${base_msg} A Release build with a hostless APIBaseURL breaks every API call (2026-07-21 regression).\"\n    exit 1\n  fi\nfi\nif [ -n \"$bad\" ]; then\n  echo \"warning: ${bad} is a placeholder — sign-in will be disabled in this build.\"\nfi\nif [ -n \"$base_msg\" ]; then\n  echo \"warning: ${base_msg}\"\nfi\n";
+			shellScript = "bad=\"\"\ncase \"${X_CLIENT_ID:-}\" in \"\"|REPLACE_ME*) bad=\"X_CLIENT_ID\" ;; esac\ncase \"${GOOGLE_IOS_CLIENT_ID:-}\" in \"\"|REPLACE_ME*) ;; esac\nbase=\"${API_BASE_URL:-}\"\nbase_msg=\"\"\ncase \"$base\" in\n  \"\")\n    base_msg=\"API_BASE_URL is unset.\" ;;\n  http:|https:|http:/|https:/|http://|https://)\n    base_msg=\"API_BASE_URL is '${base}' — no host. In xcconfig, // starts a comment, so 'https://host' truncates to '${base%%/*}'. Write it as https:/\\$()/host instead.\" ;;\n  http://*|https://*)\n    host=\"${base#*://}\"; host=\"${host%%/*}\"; host=\"${host%%:*}\"\n    case \"$host\" in\n      *.*|localhost) ;;\n      *) base_msg=\"API_BASE_URL '${base}' has host '${host}' with no dot — looks truncated or malformed.\" ;;\n    esac ;;\n  *)\n    base_msg=\"API_BASE_URL '${base}' is not an http(s):// URL. In xcconfig, write it as https:/\\$()/host so // is not eaten as a comment.\" ;;\nesac\nif [ \"${CONFIGURATION}\" = \"Release\" ]; then\n  if [ -n \"$bad\" ]; then\n    echo \"error: ${bad} is unset/placeholder in a Release build. Create Configuration/Release.local.xcconfig with real values (see Debug.local.xcconfig.example) before archiving.\"\n    exit 1\n  fi\n  if [ -n \"$base_msg\" ]; then\n    echo \"error: ${base_msg} A Release build with a hostless APIBaseURL breaks every API call (2026-07-21 regression).\"\n    exit 1\n  fi\nfi\nif [ -n \"$bad\" ]; then\n  echo \"warning: ${bad} is a placeholder — sign-in will be disabled in this build.\"\nfi\nif [ -n \"$base_msg\" ]; then\n  echo \"warning: ${base_msg}\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -675,6 +693,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FD6E82E5642BB346C352FBAB /* AppState.swift in Sources */,
+				BDC3AA5FAA8B10BDB918F8D5 /* AppleSignInController.swift in Sources */,
 				BA550E671858740D907E4D04 /* AtCapWarningCard.swift in Sources */,
 				E71D3C94F745511E66F61C59 /* AuthCoordinator.swift in Sources */,
 				C85CD70BCEA109C57E041C82 /* AuthSession.swift in Sources */,
@@ -710,10 +729,12 @@
 				715C49262E5A34B9EA05D9FC /* FunnelResultView.swift in Sources */,
 				AF78E9D9C0D93561D96E38BB /* FunnelValuation.swift in Sources */,
 				3B1DB0EA03259C3BBA018DA5 /* FunnelView.swift in Sources */,
+				9D127B9B93BE357DB894E4E3 /* GoogleSignInController.swift in Sources */,
 				6C3AEA3367017EE4CD594CCC /* GrokSuggestionsSection.swift in Sources */,
 				FDDFF40D2EAD0E4C889B2593 /* ImageCompression.swift in Sources */,
 				31021C00A00AA8C3E774BF78 /* ImageDataURL.swift in Sources */,
 				65C2A7105864DEF0143EBC1A /* JSONAPIProductsDebugView.swift in Sources */,
+				04CADC59E9E70C625D5A4834 /* LinkXAccountView.swift in Sources */,
 				36D980462C2475B02F1650C5 /* LivePreviewView.swift in Sources */,
 				C652D551FE42B114F7A8A6F6 /* LiveStorePreview.swift in Sources */,
 				611078893D9BA1BD6E43535E /* MainTabView.swift in Sources */,
@@ -737,6 +758,7 @@
 				E74A54E02E797D9B0064FBC9 /* ShopView.swift in Sources */,
 				A588D09313726CC649A0A18C /* SignInView.swift in Sources */,
 				5EFB76C84C38FA3D5BDAF194 /* SignUpReminderBanner.swift in Sources */,
+				047FA46D5C61A76548C22D14 /* SlugPickerView.swift in Sources */,
 				E399F14FF99000770FBA1FF3 /* SpeechService.swift in Sources */,
 				1748E44E55AC272DB2DBE6A0 /* SpokenConfirmation.swift in Sources */,
 				7897E8C1327A006DC1F6CBD0 /* StoreDetailView.swift in Sources */,
@@ -879,6 +901,7 @@
 			baseConfigurationReference = E1121E2A829510E995FF64D6 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RareImagery/RareImagery.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = RareImagery/Info.plist;
@@ -900,6 +923,7 @@
 			baseConfigurationReference = 311934CBAAD314C67769DDF2 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RareImagery/RareImagery.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = RareImagery/Info.plist;
@@ -1015,7 +1039,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		18192FBE69732057AC9B545C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		3697C7648FC52564FA8022C9 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 18192FBE69732057AC9B545C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
 		3F89A9971143FA71AB0087DB /* RareImageryAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RareImageryAPI;
