@@ -29,7 +29,7 @@ Native SwiftUI app (`com.rareimagery.studio`). **Not Expo** — distribution is 
      | `X_CLIENT_ID` | Yes | [X developer portal](https://developer.x.com/en/portal/dashboard) OAuth 2.0 Client ID — **must match** BFF `X_CLIENT_ID` |
      | `OAUTH_CLIENT_ID` | Yes | Drupal Admin → Simple OAuth → RareImagery iOS consumer UUID — **must be in** BFF `DRUPAL_OAUTH_CLIENT_IDS` |
      | `GOOGLE_IOS_CLIENT_ID` | Yes (App Store 4.8) | Google Cloud → Credentials → iOS client for `com.rareimagery.studio` |
-     | `GOOGLE_REVERSED_CLIENT_ID` | Yes | Same iOS client → reversed ID (`com.googleusercontent.apps.…`) for URL scheme |
+     | `GOOGLE_REVERSED_CLIENT_ID` | Yes | Google Cloud → iOS client → **URL scheme** (reversed ID, e.g. `com.googleusercontent.apps.1234567890-abcdef`). **No underscores** — RFC1738 rejects them. |
 
    - **Apple Developer:** App ID `com.rareimagery.studio` → enable **Sign in with Apple** capability (matches committed `RareImagery.entitlements`).
 
@@ -151,7 +151,7 @@ curl -sS -X POST https://rareimagery.net/api/auth/google/exchange \
 | Sign-in error on TestFlight | Error card shows build, auth mode, client prefix, and BFF code. Tap **Copy details for support**. Console.app filter: `AuthCoordinator`, `AppState`, `AuthService`. |
 | `UNKNOWN_CLIENT` | iOS `OAUTH_CLIENT_ID` not listed in BFF `DRUPAL_OAUTH_CLIENT_IDS`. |
 | Apple sign-in fails immediately | App ID missing Sign in with Apple capability; or BFF `APPLE_IOS_BUNDLE_ID` ≠ `com.rareimagery.studio`. |
-| Google sign-in fails / no callback | `GOOGLE_REVERSED_CLIENT_ID` wrong or missing; run `xcodegen generate` and confirm Google URL scheme in Info.plist. |
+| Google upload rejected: invalid URL scheme | `GOOGLE_REVERSED_CLIENT_ID` was placeholder (`REPLACE_ME` has underscores) or unset. Set real reversed client ID in Xcode Cloud — must match `[a-zA-Z0-9.+.-]+` only. |
 | Slug picker loops / ticket expired | Identity ticket TTL is 10 min — restart Apple/Google sign-in if idle on slug screen. |
 | `NEEDS_SLUG` then `SLUG_TAKEN` | Pick another slug; server validates reserved/blocked names at provision time. |
 | Legacy JWT when broker expected | `OAUTH_CLIENT_ID` still placeholder in Release build — check CI log for `Release.local.xcconfig`. |

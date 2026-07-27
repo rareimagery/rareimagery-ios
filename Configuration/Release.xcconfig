@@ -3,7 +3,8 @@ API_BASE_URL = https:/$()/rareimagery.net
 X_CLIENT_ID = REPLACE_ME_WITH_X_CLIENT_ID
 OAUTH_CLIENT_ID = VERIFY-CONSUMER-UUID
 GOOGLE_IOS_CLIENT_ID = REPLACE_ME_GOOGLE_IOS_CLIENT_ID
-GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.REPLACE_ME
+// Must be RFC1738-safe (letters, digits, . + - only — no underscores). Copy from Google Cloud iOS client.
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.set-in-release-local-xcconfig
 ENVIRONMENT = production
 
 // Note: CODE_SIGN_IDENTITY[sdk=iphoneos*] = Apple Distribution is set at the

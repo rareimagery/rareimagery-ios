@@ -25,6 +25,12 @@ echo "ci_post_clone: RareImagery.xcodeproj generated OK"
 #   GOOGLE_IOS_CLIENT_ID     — Google Cloud iOS OAuth client ID
 #   GOOGLE_REVERSED_CLIENT_ID — reversed client ID for URL scheme (com.googleusercontent.apps.…)
 # Writes gitignored Configuration/Release.local.xcconfig via Release.xcconfig #include.
+missing=""
+[ -z "${X_CLIENT_ID:-}" ] && missing="X_CLIENT_ID"
+[ -z "${OAUTH_CLIENT_ID:-}" ] && missing="${missing:+$missing }OAUTH_CLIENT_ID"
+[ -z "${GOOGLE_IOS_CLIENT_ID:-}" ] && missing="${missing:+$missing }GOOGLE_IOS_CLIENT_ID"
+[ -z "${GOOGLE_REVERSED_CLIENT_ID:-}" ] && missing="${missing:+$missing }GOOGLE_REVERSED_CLIENT_ID"
+
 if [ -n "${X_CLIENT_ID:-}" ] || [ -n "${OAUTH_CLIENT_ID:-}" ] || [ -n "${GOOGLE_IOS_CLIENT_ID:-}" ]; then
   : > Configuration/Release.local.xcconfig
   if [ -n "${X_CLIENT_ID:-}" ]; then
@@ -42,8 +48,18 @@ if [ -n "${X_CLIENT_ID:-}" ] || [ -n "${OAUTH_CLIENT_ID:-}" ] || [ -n "${GOOGLE_
   echo "ci_post_clone: wrote Configuration/Release.local.xcconfig from Xcode Cloud env"
 else
   echo "ci_post_clone: auth env vars not set — Release builds will use placeholders"
-  if [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ] || [ "${CI_XCODEBUILD_ACTION:-}" = "build-for-distribution" ]; then
-    echo "error: Archive builds require X_CLIENT_ID and OAUTH_CLIENT_ID at minimum. Set Xcode Cloud workflow Environment variables."
+fi
+
+if [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ] || [ "${CI_XCODEBUILD_ACTION:-}" = "build-for-distribution" ]; then
+  if [ -n "$missing" ]; then
+    echo "error: Archive builds require Xcode Cloud env: $missing"
+    echo "error: GOOGLE_REVERSED_CLIENT_ID must be the reversed iOS client ID (com.googleusercontent.apps.XXXX — no underscores)."
     exit 1
   fi
+  case "${GOOGLE_REVERSED_CLIENT_ID:-}" in
+    *REPLACE*|*replace*|*_*)
+      echo "error: GOOGLE_REVERSED_CLIENT_ID '${GOOGLE_REVERSED_CLIENT_ID}' is invalid for URL schemes (RFC1738: no underscores)."
+      exit 1
+      ;;
+  esac
 fi

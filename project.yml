@@ -139,7 +139,13 @@ targets:
         script: |
           bad=""
           case "${X_CLIENT_ID:-}" in ""|REPLACE_ME*) bad="X_CLIENT_ID" ;; esac
-          case "${GOOGLE_IOS_CLIENT_ID:-}" in ""|REPLACE_ME*) ;; esac
+          case "${OAUTH_CLIENT_ID:-}" in ""|VERIFY*|REPLACE_ME*) bad="${bad:-OAUTH_CLIENT_ID}" ;; esac
+          case "${GOOGLE_IOS_CLIENT_ID:-}" in ""|REPLACE_ME*) bad="${bad:-GOOGLE_IOS_CLIENT_ID}" ;; esac
+          case "${GOOGLE_REVERSED_CLIENT_ID:-}" in
+            ""|*REPLACE*|*replace*) bad="${bad:-GOOGLE_REVERSED_CLIENT_ID}" ;;
+            com.googleusercontent.apps.[a-zA-Z0-9.+.-]*) ;;
+            *) bad="${bad:-GOOGLE_REVERSED_CLIENT_ID}" ;;
+          esac
           base="${API_BASE_URL:-}"
           base_msg=""
           case "$base" in
@@ -169,6 +175,12 @@ targets:
           if [ -n "$bad" ]; then
             echo "warning: ${bad} is a placeholder — sign-in will be disabled in this build."
           fi
+          google_scheme="${GOOGLE_REVERSED_CLIENT_ID:-}"
+          case "$google_scheme" in
+            *REPLACE*|*replace*|*_*) 
+              echo "warning: GOOGLE_REVERSED_CLIENT_ID '${google_scheme}' is invalid for CFBundleURLSchemes (RFC1738: no underscores). Set a real reversed client ID from Google Cloud."
+              ;;
+          esac
           if [ -n "$base_msg" ]; then
             echo "warning: ${base_msg}"
           fi
