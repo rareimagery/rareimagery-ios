@@ -67,6 +67,13 @@ targets:
         product: GoogleSignIn
     entitlements:
       path: RareImagery/RareImagery.entitlements
+      properties:
+        # Declared here so `xcodegen generate` regenerates the entitlement into
+        # the file. Without `properties`, xcodegen writes an empty <dict/> and
+        # STRIPS Sign in with Apple on every regen (incl. Xcode Cloud via
+        # ci_post_clone.sh) — breaking Apple login and failing App Store 4.8.
+        com.apple.developer.applesignin:
+          - Default
     configFiles:
       Debug: Configuration/Debug.xcconfig
       Release: Configuration/Release.xcconfig
@@ -142,8 +149,8 @@ targets:
           case "${OAUTH_CLIENT_ID:-}" in ""|VERIFY*|REPLACE_ME*) bad="${bad:-OAUTH_CLIENT_ID}" ;; esac
           case "${GOOGLE_IOS_CLIENT_ID:-}" in ""|REPLACE_ME*) bad="${bad:-GOOGLE_IOS_CLIENT_ID}" ;; esac
           case "${GOOGLE_REVERSED_CLIENT_ID:-}" in
-            ""|*REPLACE*|*replace*) bad="${bad:-GOOGLE_REVERSED_CLIENT_ID}" ;;
-            com.googleusercontent.apps.[a-zA-Z0-9.+.-]*) ;;
+            ""|*REPLACE*|*replace*|*_*) bad="${bad:-GOOGLE_REVERSED_CLIENT_ID}" ;;
+            com.googleusercontent.apps.[a-zA-Z0-9.+-]*) ;;
             *) bad="${bad:-GOOGLE_REVERSED_CLIENT_ID}" ;;
           esac
           base="${API_BASE_URL:-}"
