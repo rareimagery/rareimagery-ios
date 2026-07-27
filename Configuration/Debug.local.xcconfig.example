@@ -15,6 +15,11 @@ X_CLIENT_ID = paste_your_x_oauth_client_id_here
 # consumer UUID here. While unset/placeholder, TestFlight uses legacy JWT sign-in.
 OAUTH_CLIENT_ID = paste_your_simple_oauth_consumer_uuid_here
 
+# Google Sign-In (multi-provider — required when shipping Google button):
+#   Google Cloud Console → APIs & Services → Credentials → iOS client
+GOOGLE_IOS_CLIENT_ID = paste_your_google_ios_client_id_here
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.paste_reversed_id_here
+
 # Local dev note: Debug uses API_BASE_URL=http://localhost:3000 for the BFF.
 # Drupal OAuth (/oauth/token) is on production or a local Drupal :8080 stack.
 # For full broker testing, point API_BASE_URL at https://rareimagery.net or

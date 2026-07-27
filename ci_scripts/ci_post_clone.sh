@@ -18,14 +18,14 @@ xcodegen generate
 test -d RareImagery.xcodeproj
 echo "ci_post_clone: RareImagery.xcodeproj generated OK"
 
-# Xcode Cloud: inject X OAuth client ID for Release Archive builds.
-# Set X_CLIENT_ID as an environment variable in the workflow settings.
-# Optional: set OAUTH_CLIENT_ID when ADR-023 broker infra is live (Drupal
-# simple_oauth consumer UUID). When unset, Release builds use the legacy
-# BFF /api/mobile/auth/x/callback JWT path (TestFlight default today).
-# Writes gitignored Configuration/Release.local.xcconfig so Release.xcconfig
-# picks up the real value via #include? "Release.local.xcconfig".
-if [ -n "${X_CLIENT_ID:-}" ] || [ -n "${OAUTH_CLIENT_ID:-}" ]; then
+# Xcode Cloud: inject auth config for Release Archive builds.
+# Set these as environment variables in the workflow (App Store Connect → Xcode Cloud → Workflow → Environment):
+#   X_CLIENT_ID              — X OAuth 2.0 Client ID (must match BFF X_CLIENT_ID)
+#   OAUTH_CLIENT_ID          — Drupal simple_oauth consumer UUID (broker primary path)
+#   GOOGLE_IOS_CLIENT_ID     — Google Cloud iOS OAuth client ID
+#   GOOGLE_REVERSED_CLIENT_ID — reversed client ID for URL scheme (com.googleusercontent.apps.…)
+# Writes gitignored Configuration/Release.local.xcconfig via Release.xcconfig #include.
+if [ -n "${X_CLIENT_ID:-}" ] || [ -n "${OAUTH_CLIENT_ID:-}" ] || [ -n "${GOOGLE_IOS_CLIENT_ID:-}" ]; then
   : > Configuration/Release.local.xcconfig
   if [ -n "${X_CLIENT_ID:-}" ]; then
     printf 'X_CLIENT_ID = %s\n' "$X_CLIENT_ID" >> Configuration/Release.local.xcconfig
@@ -33,11 +33,17 @@ if [ -n "${X_CLIENT_ID:-}" ] || [ -n "${OAUTH_CLIENT_ID:-}" ]; then
   if [ -n "${OAUTH_CLIENT_ID:-}" ]; then
     printf 'OAUTH_CLIENT_ID = %s\n' "$OAUTH_CLIENT_ID" >> Configuration/Release.local.xcconfig
   fi
+  if [ -n "${GOOGLE_IOS_CLIENT_ID:-}" ]; then
+    printf 'GOOGLE_IOS_CLIENT_ID = %s\n' "$GOOGLE_IOS_CLIENT_ID" >> Configuration/Release.local.xcconfig
+  fi
+  if [ -n "${GOOGLE_REVERSED_CLIENT_ID:-}" ]; then
+    printf 'GOOGLE_REVERSED_CLIENT_ID = %s\n' "$GOOGLE_REVERSED_CLIENT_ID" >> Configuration/Release.local.xcconfig
+  fi
   echo "ci_post_clone: wrote Configuration/Release.local.xcconfig from Xcode Cloud env"
 else
-  echo "ci_post_clone: X_CLIENT_ID not set — Release builds will use placeholder until workflow env is configured"
+  echo "ci_post_clone: auth env vars not set — Release builds will use placeholders"
   if [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ] || [ "${CI_XCODEBUILD_ACTION:-}" = "build-for-distribution" ]; then
-    echo "error: X_CLIENT_ID is required for Archive builds. Set it in Xcode Cloud workflow Environment variables."
+    echo "error: Archive builds require X_CLIENT_ID and OAUTH_CLIENT_ID at minimum. Set Xcode Cloud workflow Environment variables."
     exit 1
   fi
 fi
