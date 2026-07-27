@@ -50,6 +50,9 @@ schemes:
 packages:
   RareImageryAPI:
     path: Packages/RareImageryAPI
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: "8.0.0"
 
 targets:
   RareImagery:
@@ -60,6 +63,10 @@ targets:
       - path: RareImagery
     dependencies:
       - package: RareImageryAPI
+      - package: GoogleSignIn
+        product: GoogleSignIn
+    entitlements:
+      path: RareImagery/RareImagery.entitlements
     configFiles:
       Debug: Configuration/Debug.xcconfig
       Release: Configuration/Release.xcconfig
@@ -89,9 +96,13 @@ targets:
           - CFBundleURLName: com.rareimagery.studio.oauth
             CFBundleURLSchemes:
               - rareimagery
+          - CFBundleURLName: com.google.oauth
+            CFBundleURLSchemes:
+              - $(GOOGLE_REVERSED_CLIENT_ID)
         APIBaseURL: $(API_BASE_URL)
         XClientID: $(X_CLIENT_ID)
         OAuthClientID: $(OAUTH_CLIENT_ID)
+        GoogleIOSClientID: $(GOOGLE_IOS_CLIENT_ID)
         Environment: $(ENVIRONMENT)
         UIAppFonts:
           - SpaceGrotesk-Regular.ttf
@@ -128,6 +139,7 @@ targets:
         script: |
           bad=""
           case "${X_CLIENT_ID:-}" in ""|REPLACE_ME*) bad="X_CLIENT_ID" ;; esac
+          case "${GOOGLE_IOS_CLIENT_ID:-}" in ""|REPLACE_ME*) ;; esac
           base="${API_BASE_URL:-}"
           base_msg=""
           case "$base" in

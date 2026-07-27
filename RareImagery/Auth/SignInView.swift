@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import RareImageryAPI
 
 /// Sign-in / account-creation screen — redesigned 2026-07-13.
@@ -20,6 +21,14 @@ struct SignInView: View {
     @State private var isAuthenticating = false
     @State private var isRetryingTrial = false
     @State private var diagnosticCopied = false
+    @State private var slugPickContext: SlugPickContext?
+
+    private struct SlugPickContext: Identifiable {
+        let id = UUID()
+        let request: AuthService.ProviderSlugRequired
+        let exchangePath: String
+        let continuation: CheckedContinuation<String?, Never>
+    }
 
     private var usesDrupalOAuth: Bool {
         state.configuration.isOAuthClientConfigured
@@ -45,9 +54,9 @@ struct SignInView: View {
                         errorCard(error)
                     }
 
-                    primaryButton
+                    signInButtons
 
-                    Text("New here? Continuing with X creates your account.")
+                    Text("New here? Pick any provider — we'll create your storefront.")
                         .font(AppFont.bodyText(14))
                         .foregroundStyle(AppColor.textSecondary)
                         .multilineTextAlignment(.center)
@@ -63,6 +72,30 @@ struct SignInView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 28)
             }
+        }
+        .onAppear {
+            coordinator.slugPicker = { request, path in
+                await withCheckedContinuation { cont in
+                    slugPickContext = SlugPickContext(
+                        request: request,
+                        exchangePath: path,
+                        continuation: cont
+                    )
+                }
+            }
+        }
+        .sheet(item: $slugPickContext) { context in
+            SlugPickerView(
+                suggestedSlug: context.request.suggestedSlug,
+                onSubmit: { slug in
+                    context.continuation.resume(returning: slug)
+                    slugPickContext = nil
+                },
+                onCancel: {
+                    context.continuation.resume(returning: nil)
+                    slugPickContext = nil
+                }
+            )
         }
     }
 
@@ -120,9 +153,65 @@ struct SignInView: View {
         }
     }
 
-    // MARK: - Primary action
+    // MARK: - Sign-in buttons (Apple → Google → X)
 
-    private var primaryButton: some View {
+    private var signInButtons: some View {
+        VStack(spacing: 14) {
+            appleButton
+            googleButton
+            xButton
+        }
+    }
+
+    private var appleButton: some View {
+        Button {
+            Task {
+                guard state.configuration.isOAuthClientConfigured else {
+                    state.session.setSignInFailure(
+                        .missingClientID(configuration: state.configuration)
+                    )
+                    return
+                }
+                isAuthenticating = true
+                await coordinator.signInWithApple(state: state)
+                isAuthenticating = false
+            }
+        } label: {
+            signInLabel(
+                icon: "apple.logo",
+                title: isAuthenticating ? "Signing in…" : "Continue with Apple",
+                background: .black
+            )
+        }
+        .disabled(isAuthenticating)
+    }
+
+    private var googleButton: some View {
+        Button {
+            Task {
+                guard state.configuration.isOAuthClientConfigured else {
+                    state.session.setSignInFailure(
+                        .missingClientID(configuration: state.configuration)
+                    )
+                    return
+                }
+                guard let presenter = topViewController() else { return }
+                isAuthenticating = true
+                await coordinator.signInWithGoogle(state: state, presenting: presenter)
+                isAuthenticating = false
+            }
+        } label: {
+            signInLabel(
+                icon: "g.circle.fill",
+                title: isAuthenticating ? "Signing in…" : "Continue with Google",
+                background: Color(red: 0.98, green: 0.98, blue: 0.98)
+            )
+        }
+        .disabled(isAuthenticating)
+        .foregroundStyle(.black)
+    }
+
+    private var xButton: some View {
         Button {
             Task {
                 guard state.configuration.isXClientIDConfigured else {
@@ -136,35 +225,49 @@ struct SignInView: View {
                 isAuthenticating = false
             }
         } label: {
-            HStack(spacing: 10) {
-                if isAuthenticating {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Image(systemName: usesDrupalOAuth
-                          ? "person.crop.circle.badge.checkmark"
-                          : "x.square.fill")
-                        .font(.system(size: 20, weight: .semibold))
-                }
-                Text(primaryButtonTitle)
-                    .font(AppFont.buttonLabel)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color.black, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(AppColor.borderGold, lineWidth: 1)
+            signInLabel(
+                icon: usesDrupalOAuth ? "person.crop.circle.badge.checkmark" : "x.square.fill",
+                title: isAuthenticating ? "Signing in…" : "Continue with X",
+                background: Color.black.opacity(0.85)
             )
         }
         .disabled(isAuthenticating)
     }
 
-    private var primaryButtonTitle: String {
-        if isAuthenticating { return "Signing in…" }
-        return usesDrupalOAuth ? "Sign in" : "Continue with X"
+    private func signInLabel(icon: String, title: String, background: Color) -> some View {
+        HStack(spacing: 10) {
+            if isAuthenticating {
+                ProgressView()
+                    .tint(icon == "g.circle.fill" ? .black : .white)
+            } else {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+            }
+            Text(title)
+                .font(AppFont.buttonLabel)
+        }
+        .foregroundStyle(icon == "g.circle.fill" ? .black : .white)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(background, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(AppColor.borderGold, lineWidth: 1)
+        )
     }
+
+    private func topViewController() -> UIViewController? {
+        let scenes = UIApplication.shared.connectedScenes
+        let windowScene = scenes.first { $0.activationState == .foregroundActive } as? UIWindowScene
+            ?? scenes.compactMap { $0 as? UIWindowScene }.first
+        var controller = windowScene?.windows.first(where: \.isKeyWindow)?.rootViewController
+        while let presented = controller?.presentedViewController {
+            controller = presented
+        }
+        return controller
+    }
+
+    // MARK: - Primary action (legacy — removed; see signInButtons)
 
     // MARK: - Errors
 

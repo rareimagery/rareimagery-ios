@@ -93,4 +93,5 @@ public enum MobileErrorCode: String, Sendable {
     case drupalError = "DRUPAL_ERROR"
     case grantNotEnabled = "GRANT_NOT_ENABLED"
     case validationFailed = "VALIDATION_FAILED"
+    case needsSlug = "NEEDS_SLUG"
 }

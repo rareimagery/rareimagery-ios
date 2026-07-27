@@ -92,6 +92,9 @@ struct TweakSheetView: View {
                             slugSection
                         }
 
+                        LinkXAccountView()
+                            .padding(.horizontal, 20)
+
                         // Save CTA
                         saveButton
 

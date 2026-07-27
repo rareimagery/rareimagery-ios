@@ -112,6 +112,50 @@ public actor AuthService {
         logger.info("Signed out — tokens cleared from Keychain")
     }
 
+    /// Link X enrichment to the signed-in creator (Phase E). Does not replace identity.
+    public func linkXAccount(callbackURL: URL) async throws -> String {
+        guard let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false) else {
+            throw APIError.authFailed("Malformed callback URL")
+        }
+        let items = components.queryItems ?? []
+        guard let code = items.first(where: { $0.name == "code" })?.value else {
+            throw APIError.authFailed("No authorization code in callback")
+        }
+        guard let verifier = pendingVerifier else {
+            throw APIError.authFailed("No PKCE verifier in memory — flow not started")
+        }
+        defer {
+            pendingVerifier = nil
+            pendingState = nil
+        }
+        struct LinkBody: Encodable {
+            let code: String
+            let codeVerifier: String
+            let redirectUri: String
+        }
+        let payload = LinkBody(
+            code: code,
+            codeVerifier: verifier,
+            redirectUri: configuration.redirectURI
+        )
+        struct LinkResponse: Decodable {
+            let linked: Bool?
+            let handle: String?
+        }
+        let endpoint = APIEndpoint(
+            path: "/api/creator/link-x",
+            method: .post,
+            body: try JSONEncoder().encode(payload),
+            requiresAuth: true,
+            contentType: "application/json",
+            timeout: 20
+        )
+        let response = try await client.send(endpoint, as: LinkResponse.self)
+        let handle = response.handle ?? "x"
+        logger.info("X account linked — @\(handle)")
+        return handle
+    }
+
     // MARK: - ADR-023 broker (X identity → Drupal-issued tokens)
 
     /// Response from the BFF's `/api/auth/x/exchange` broker endpoint.
@@ -208,5 +252,178 @@ public actor AuthService {
         let exchange = try await client.send(endpoint, as: DrupalExchange.self)
         logger.info("Broker exchange complete — drupal_code received (expires in \(exchange.expiresIn)s)")
         return exchange
+    }
+
+    // MARK: - Apple / Google broker (ADR-023 multi-provider)
+
+    public struct ProviderSlugRequired: Sendable {
+        public let ticket: String
+        public let suggestedSlug: String?
+        public let message: String
+    }
+
+    public enum ProviderExchangeOutcome: Sendable {
+        case completed(DrupalExchange)
+        case needsSlug(ProviderSlugRequired)
+    }
+
+    public func exchangeAppleForDrupalCode(
+        identityToken: String,
+        fullName: String?,
+        drupalCodeChallenge: String,
+        clientId: String
+    ) async throws -> ProviderExchangeOutcome {
+        struct Request: Encodable {
+            let identityToken: String
+            let fullName: String?
+            let clientId: String
+            let drupalCodeChallenge: String
+
+            enum CodingKeys: String, CodingKey {
+                case identityToken
+                case fullName
+                case clientId = "client_id"
+                case drupalCodeChallenge = "drupal_code_challenge"
+            }
+        }
+        let payload = Request(
+            identityToken: identityToken,
+            fullName: fullName,
+            clientId: clientId,
+            drupalCodeChallenge: drupalCodeChallenge
+        )
+        return try await postProviderExchange(
+            path: "/api/auth/apple/exchange",
+            body: try JSONEncoder().encode(payload)
+        )
+    }
+
+    public func exchangeGoogleForDrupalCode(
+        identityToken: String,
+        drupalCodeChallenge: String,
+        clientId: String
+    ) async throws -> ProviderExchangeOutcome {
+        struct Request: Encodable {
+            let identityToken: String
+            let clientId: String
+            let drupalCodeChallenge: String
+
+            enum CodingKeys: String, CodingKey {
+                case identityToken
+                case clientId = "client_id"
+                case drupalCodeChallenge = "drupal_code_challenge"
+            }
+        }
+        let payload = Request(
+            identityToken: identityToken,
+            clientId: clientId,
+            drupalCodeChallenge: drupalCodeChallenge
+        )
+        return try await postProviderExchange(
+            path: "/api/auth/google/exchange",
+            body: try JSONEncoder().encode(payload)
+        )
+    }
+
+    public func completeProviderSlugPick(
+        path: String,
+        ticket: String,
+        slug: String,
+        drupalCodeChallenge: String,
+        clientId: String
+    ) async throws -> DrupalExchange {
+        struct Request: Encodable {
+            let ticket: String
+            let slug: String
+            let clientId: String
+            let drupalCodeChallenge: String
+
+            enum CodingKeys: String, CodingKey {
+                case ticket, slug
+                case clientId = "client_id"
+                case drupalCodeChallenge = "drupal_code_challenge"
+            }
+        }
+        let payload = Request(
+            ticket: ticket,
+            slug: slug,
+            clientId: clientId,
+            drupalCodeChallenge: drupalCodeChallenge
+        )
+        let outcome = try await postProviderExchange(
+            path: path,
+            body: try JSONEncoder().encode(payload)
+        )
+        switch outcome {
+        case .completed(let exchange):
+            return exchange
+        case .needsSlug:
+            throw APIError.authFailed("Slug pick was rejected — please try a different slug.")
+        }
+    }
+
+    private struct NeedsSlugResponse: Decodable {
+        struct ErrorBody: Decodable {
+            let code: String?
+            let message: String?
+        }
+        let error: ErrorBody?
+        let suggestedSlug: String?
+        let ticket: String?
+
+        enum CodingKeys: String, CodingKey {
+            case error
+            case suggestedSlug
+            case ticket
+        }
+    }
+
+    private func postProviderExchange(path: String, body: Data) async throws -> ProviderExchangeOutcome {
+        var request = URLRequest(url: configuration.baseURL.appending(path: path))
+        request.httpMethod = "POST"
+        request.httpBody = body
+        request.timeoutInterval = 20
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            throw APIError.network(urlError)
+        } catch {
+            throw APIError.network(URLError(.unknown))
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
+        }
+
+        if http.statusCode == 409,
+           let needs = try? JSONDecoder().decode(NeedsSlugResponse.self, from: data),
+           needs.error?.code == MobileErrorCode.needsSlug.rawValue,
+           let ticket = needs.ticket, !ticket.isEmpty {
+            return .needsSlug(ProviderSlugRequired(
+                ticket: ticket,
+                suggestedSlug: needs.suggestedSlug,
+                message: needs.error?.message ?? "Choose a storefront slug."
+            ))
+        }
+
+        if http.statusCode == 200,
+           let exchange = try? JSONDecoder().decode(DrupalExchange.self, from: data),
+           !exchange.drupalCode.isEmpty {
+            logger.info("Provider exchange complete — drupal_code received")
+            return .completed(exchange)
+        }
+
+        if let envelope = try? JSONDecoder().decode(MobileErrorResponse.self, from: data),
+           let code = envelope.code.flatMap(MobileErrorCode.init(rawValue:)) {
+            throw APIError.badRequest(code: code, message: envelope.displayMessage)
+        }
+        throw APIError.serverError(
+            status: http.statusCode,
+            code: nil,
+            message: String(data: data, encoding: .utf8)
+        )
     }
 }
