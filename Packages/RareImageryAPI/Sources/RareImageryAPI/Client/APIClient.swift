@@ -125,6 +125,26 @@ public actor APIClient {
         return data
     }
 
+    /// Perform a request via the injectable session and return the raw HTTP
+    /// response + body WITHOUT status-based error mapping — the caller inspects
+    /// the status. Unlike `send`/`performRawRequest`, a non-2xx (e.g. the broker's
+    /// `409 NEEDS_SLUG`) is returned, not thrown. Uses the same session as every
+    /// other call, so it is exercisable via MockURLProtocol in tests.
+    public func rawResponse(for request: URLRequest) async throws -> (HTTPURLResponse, Data) {
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let urlError as URLError {
+            throw APIError.network(urlError)
+        } catch {
+            throw APIError.network(URLError(.unknown))
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
+        }
+        return (http, data)
+    }
+
     /// Upload from a local file (preferred for large video / background sessions).
     public func uploadFile(
         fromFile fileURL: URL,

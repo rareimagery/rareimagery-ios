@@ -386,17 +386,9 @@ public actor AuthService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        let (data, response): (Data, URLResponse)
-        do {
-            (data, response) = try await URLSession.shared.data(for: request)
-        } catch let urlError as URLError {
-            throw APIError.network(urlError)
-        } catch {
-            throw APIError.network(URLError(.unknown))
-        }
-        guard let http = response as? HTTPURLResponse else {
-            throw APIError.serverError(status: -1, code: nil, message: "Non-HTTP response")
-        }
+        // Route through the client's injectable session (not URLSession.shared)
+        // so the 409/200/error branching is exercisable via MockURLProtocol.
+        let (http, data) = try await client.rawResponse(for: request)
 
         if http.statusCode == 409,
            let needs = try? JSONDecoder().decode(NeedsSlugResponse.self, from: data),

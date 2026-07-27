@@ -38,7 +38,7 @@ struct SlugPickerView: View {
                     TextField("your-name", text: $slug)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .keyboardType(.asciiCapableURL)
+                        .keyboardType(.asciiCapable)
                         .focused($slugFocused)
                         .padding(14)
                         .background(AppColor.surface.opacity(0.85), in: RoundedRectangle(cornerRadius: 12))
@@ -99,7 +99,7 @@ struct SlugPickerView: View {
     private var isValidSlug: Bool {
         let trimmed = slug.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 3, trimmed.count <= 30 else { return false }
-        return trimmed.range(of: "^[a-z0-9-]+$", options: .regularExpression) != nil
+        return trimmed.range(of: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", options: .regularExpression) != nil
     }
 
     private func submit() async {
@@ -112,8 +112,8 @@ struct SlugPickerView: View {
             localError = "Slug must be 30 characters or fewer."
             return
         }
-        guard trimmed.range(of: "^[a-z0-9-]+$", options: .regularExpression) != nil else {
-            localError = "Use lowercase letters, numbers, and hyphens only."
+        guard trimmed.range(of: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$", options: .regularExpression) != nil else {
+            localError = "Use lowercase letters, numbers, and hyphens — not at the start or end."
             return
         }
         isSubmitting = true
