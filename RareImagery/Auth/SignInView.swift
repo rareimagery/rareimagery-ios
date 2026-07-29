@@ -158,7 +158,13 @@ struct SignInView: View {
     private var signInButtons: some View {
         VStack(spacing: 14) {
             appleButton
-            googleButton
+            // Google is optional — only shown once a real iOS client ID is set
+            // (GOOGLE_IOS_CLIENT_ID). Until then it stays hidden so it's never a
+            // dead tap; Apple + X still work. (App Store 4.8 is satisfied because
+            // Apple is offered alongside X regardless.)
+            if state.configuration.isGoogleClientConfigured {
+                googleButton
+            }
             xButton
         }
     }
