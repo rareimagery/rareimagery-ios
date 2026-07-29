@@ -25,11 +25,14 @@ echo "ci_post_clone: RareImagery.xcodeproj generated OK"
 #   GOOGLE_IOS_CLIENT_ID     — Google Cloud iOS OAuth client ID
 #   GOOGLE_REVERSED_CLIENT_ID — reversed client ID for URL scheme (com.googleusercontent.apps.…)
 # Writes gitignored Configuration/Release.local.xcconfig via Release.xcconfig #include.
+# Only X_CLIENT_ID + OAUTH_CLIENT_ID are REQUIRED for an archive. Google is
+# OPTIONAL: leave its env vars unset and the build uses the RFC-safe
+# Release.xcconfig defaults, the Google button stays hidden in-app, and Apple +
+# X still ship. If GOOGLE_REVERSED_CLIENT_ID is set it is still format-validated
+# below (it becomes a CFBundleURLScheme App Store rejects if malformed).
 missing=""
 [ -z "${X_CLIENT_ID:-}" ] && missing="X_CLIENT_ID"
 [ -z "${OAUTH_CLIENT_ID:-}" ] && missing="${missing:+$missing }OAUTH_CLIENT_ID"
-[ -z "${GOOGLE_IOS_CLIENT_ID:-}" ] && missing="${missing:+$missing }GOOGLE_IOS_CLIENT_ID"
-[ -z "${GOOGLE_REVERSED_CLIENT_ID:-}" ] && missing="${missing:+$missing }GOOGLE_REVERSED_CLIENT_ID"
 
 if [ -n "${X_CLIENT_ID:-}" ] || [ -n "${OAUTH_CLIENT_ID:-}" ] || [ -n "${GOOGLE_IOS_CLIENT_ID:-}" ]; then
   : > Configuration/Release.local.xcconfig
@@ -53,7 +56,7 @@ fi
 if [ "${CI_XCODEBUILD_ACTION:-}" = "archive" ] || [ "${CI_XCODEBUILD_ACTION:-}" = "build-for-distribution" ]; then
   if [ -n "$missing" ]; then
     echo "error: Archive builds require Xcode Cloud env: $missing"
-    echo "error: GOOGLE_REVERSED_CLIENT_ID must be the reversed iOS client ID (com.googleusercontent.apps.XXXX — no underscores)."
+    echo "error: (Google is optional — set GOOGLE_IOS_CLIENT_ID + GOOGLE_REVERSED_CLIENT_ID only when enabling Google sign-in.)"
     exit 1
   fi
   case "${GOOGLE_REVERSED_CLIENT_ID:-}" in

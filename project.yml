@@ -147,7 +147,15 @@ targets:
           bad=""
           case "${X_CLIENT_ID:-}" in ""|REPLACE_ME*) bad="X_CLIENT_ID" ;; esac
           case "${OAUTH_CLIENT_ID:-}" in ""|VERIFY*|REPLACE_ME*) bad="${bad:-OAUTH_CLIENT_ID}" ;; esac
-          case "${GOOGLE_IOS_CLIENT_ID:-}" in ""|REPLACE_ME*) bad="${bad:-GOOGLE_IOS_CLIENT_ID}" ;; esac
+          # Google is OPTIONAL: an unset/placeholder GOOGLE_IOS_CLIENT_ID just hides
+          # the Google button in-app (SignInView.isGoogleClientConfigured) — it does
+          # NOT fail the build, so Apple + X can ship without Google configured.
+          google_off=""
+          case "${GOOGLE_IOS_CLIENT_ID:-}" in ""|REPLACE_ME*) google_off=1 ;; esac
+          # GOOGLE_REVERSED_CLIENT_ID is still validated: it is baked into
+          # CFBundleURLSchemes and App Store rejects a malformed scheme, so an
+          # underscore/placeholder must fail even when Google sign-in is off. The
+          # RFC-safe default in Release.xcconfig passes this check.
           case "${GOOGLE_REVERSED_CLIENT_ID:-}" in
             ""|*REPLACE*|*replace*|*_*) bad="${bad:-GOOGLE_REVERSED_CLIENT_ID}" ;;
             com.googleusercontent.apps.[a-zA-Z0-9.+-]*) ;;
@@ -181,6 +189,9 @@ targets:
           fi
           if [ -n "$bad" ]; then
             echo "warning: ${bad} is a placeholder — sign-in will be disabled in this build."
+          fi
+          if [ -n "$google_off" ]; then
+            echo "warning: GOOGLE_IOS_CLIENT_ID is unset/placeholder — Google sign-in is hidden in this build (Apple + X still work). Set it to enable Google."
           fi
           google_scheme="${GOOGLE_REVERSED_CLIENT_ID:-}"
           case "$google_scheme" in
